@@ -109,7 +109,7 @@ class DatabaseManager {
         if (!hasAdmin) {
             // Setup default superadmin (password akan di-setup di auth.js)
             await this.db.users.add({
-                email: 'arif.azwar79@gmail.com',
+                email: 'arif.fairel@gmail.com',
                 nama: 'Arif Azwar',
                 role: 'superadmin',
                 pin: null, // Akan di-set saat first login
