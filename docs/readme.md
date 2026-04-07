@@ -1,42 +1,16 @@
-# 📚 Perpustakaan Digital SD Muhammadiyah 01 Kukusan
+# Dokumentasi Perpustakaan SDM01 Kukusan
 
-Sistem manajemen perpustakaan serverless berbasis PWA (Progressive Web App) 
-yang menggunakan Google Drive sebagai cloud storage.
+Folder ini berisi semua dokumentasi proyek.
 
-## ✨ Fitur Utama
+## Daftar Dokumen
 
-- 🔄 **Offline First** - Bekerja tanpa internet, sync saat online
-- 📱 **Responsive** - Desktop, tablet, dan mobile friendly
-- 🔐 **Multi-user** - Role: Superadmin, Admin, Pustakawan, Siswa, Guru
-- 📷 **QR Code** - Scan kartu anggota dan label buku
-- ☁️ **Cloud Backup** - Otomatis sync ke Google Drive
-- 📊 **Laporan** - Export Excel dan PDF
+- `SETUP.md` - Panduan setup awal sistem
+- `USER-GUIDE.md` - Panduan pengguna untuk pustakawan dan siswa
+- `TROUBLESHOOTING.md` - Solusi masalah umum
+- `CHANGELOG.md` - Riwayat perubahan dan update
 
-## 🚀 Quick Start
+## Informasi Kontak
 
-### Untuk Pustakawan
-
-1. Buka: https://sdm01kks.github.io/perpustakaan/
-2. Login dengan akun yang diberikan admin
-3. Mulai kelola buku dan proses peminjaman
-
-### Untuk Siswa
-
-1. Scan QR code di kartu perpustakaan
-2. Cari buku di katalog digital
-3. Lihat status peminjaman Anda
-
-## 📖 Dokumentasi
-
-- [Panduan Setup](docs/SETUP.md)
-- [Panduan Pengguna](docs/USER-GUIDE.md)
-- [Solusi Masalah](docs/TROUBLESHOOTING.md)
-
-## 🛠️ Teknologi
-
-- **Frontend**: HTML5, Tailwind CSS, Vanilla JavaScript
-- **Storage**: IndexedDB (local), Google Drive (cloud)
-- **PWA**: Service Worker, Web App Manifest
-- **Utilities**: Dexie.js, QRCode.js, SheetJS, jsPDF
-
-## 📂 Struktur Repository
+- **Sekolah**: SD Muhammadiyah 01 Kukusan
+- **Superadmin**: arif.azwar79@gmail.com
+- **Repository**: https://github.com/sdm01kks/perpustakaan
