@@ -8,10 +8,10 @@
 
 const DRIVE_CONFIG = {
     // API Key untuk akses publik (bisa di-commit ke GitHub)
-    API_KEY: 'YOUR_API_KEY_HERE',
+    API_KEY: 'AIzaSyDtp1wSGBVqEuhyxXTYOLzJeYKk6zZZE7Y',
     
     // Client ID untuk OAuth (bisa di-commit ke GitHub)
-    CLIENT_ID: 'YOUR_CLIENT_ID_HERE',
+    CLIENT_ID: '651081925275-ca4lhpcrh71nvpe0jltgqbr9tisaal1j.apps.googleusercontent.com',
     
     // Scopes yang diperlukan
     SCOPES: 'https://www.googleapis.com/auth/drive.file',
