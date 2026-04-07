@@ -5,33 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Pustakawan - SDM01 Kukusan</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Dexie.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     
-    <!-- Chart.js untuk statistik -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-        }
-        .sidebar {
-            background: linear-gradient(180deg, #1e3a8a 0%, #3730a3 100%);
-        }
-        .card-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        .nav-item.active {
-            background: rgba(255, 255, 255, 0.2);
-            border-left: 4px solid #60a5fa;
-        }
+        body { font-family: 'Nunito', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1e3a8a 0%, #3730a3 100%); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .nav-item.active { background: rgba(255, 255, 255, 0.2); border-left: 4px solid #60a5fa; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
@@ -41,9 +23,7 @@
         <!-- Logo -->
         <div class="p-6 border-b border-blue-400/30">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg">
-                    📚
-                </div>
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg">📚</div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight">SDM01</h1>
                     <p class="text-xs text-blue-200">Perpustakaan</p>
@@ -54,60 +34,46 @@
         <!-- Menu -->
         <nav class="flex-1 py-4">
             <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">📊</span>
-                <span>Dashboard</span>
+                <span class="text-xl">📊</span><span>Dashboard</span>
             </a>
-            
             <a href="#" onclick="showSection('books')" id="nav-books" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">📖</span>
-                <span>Kelola Buku</span>
+                <span class="text-xl">📖</span><span>Kelola Buku</span>
             </a>
-            
             <a href="#" onclick="showSection('members')" id="nav-members" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">👥</span>
-                <span>Anggota</span>
+                <span class="text-xl">👥</span><span>Anggota</span>
             </a>
-            
             <a href="#" onclick="showSection('circulation')" id="nav-circulation" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">🔄</span>
-                <span>Sirkulasi</span>
+                <span class="text-xl">🔄</span><span>Sirkulasi</span>
             </a>
-            
             <a href="#" onclick="showSection('reports')" id="nav-reports" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">📈</span>
-                <span>Laporan</span>
+                <span class="text-xl">📈</span><span>Laporan</span>
             </a>
         </nav>
 
-    <!-- User Info & Logout -->
-    <div class="p-4 border-t border-blue-400/30">
-        <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold">
-                👤
+        <!-- User Info & Logout -->
+        <div class="p-4 border-t border-blue-400/30">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold">👤</div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm truncate" id="user-name">Memuat...</p>
+                    <p class="text-xs text-blue-200" id="user-role">Pustakawan</p>
+                </div>
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="font-semibold text-sm truncate" id="user-name">Memuat...</p>
-                <p class="text-xs text-blue-200" id="user-role">Pustakawan</p>
+            
+            <!-- PIN Display -->
+            <div class="mb-3 bg-blue-800/50 rounded-lg p-2">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs text-blue-200">PIN Saya:</span>
+                    <button onclick="togglePinDisplay()" class="text-xs text-white hover:text-blue-200">👁️ Lihat</button>
+                </div>
+                <p id="pin-display" class="text-center font-mono text-lg tracking-widest text-white">••••••</p>
             </div>
-        </div>
-    
-    <!-- Tampilkan PIN (hanya untuk user sendiri) -->
-    <div class="mb-3 bg-blue-800/50 rounded-lg p-2">
-        <div class="flex justify-between items-center">
-            <span class="text-xs text-blue-200">PIN Saya:</span>
-            <button onclick="toggleMyPin()" class="text-xs text-white hover:text-blue-200">
-                👁️ Lihat
+            
+            <!-- Logout Button - PENTING: onclick="logoutPustakawan()" -->
+            <button onclick="logoutPustakawan()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2">
+                <span>🚪</span><span>Logout</span>
             </button>
         </div>
-        <p id="my-pin-display" class="text-center font-mono text-lg tracking-widest text-white mt-1">
-            ••••••
-        </p>
-    </div>
-    
-    <button onclick="logout()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold transition-all">
-        🚪 Logout
-    </button>
-    </div>
     </aside>
 
     <!-- Main Content -->
@@ -121,8 +87,7 @@
             </div>
             <div class="flex gap-3">
                 <button onclick="syncToDrive()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
-                    <span>☁️</span>
-                    <span>Sync ke Drive</span>
+                    <span>☁️</span><span>Sync ke Drive</span>
                 </button>
                 <div class="bg-white px-4 py-2 rounded-lg shadow text-sm text-gray-600">
                     <span id="sync-status">🟢 Siap</span>
@@ -136,9 +101,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl">
-                            📚
-                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl">📚</div>
                         <span class="text-green-500 text-sm font-semibold">Total</span>
                     </div>
                     <p class="text-3xl font-bold text-gray-800" id="stat-total-books">0</p>
@@ -147,9 +110,7 @@
 
                 <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">
-                            ✅
-                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">✅</div>
                         <span class="text-green-500 text-sm font-semibold">Tersedia</span>
                     </div>
                     <p class="text-3xl font-bold text-gray-800" id="stat-available">0</p>
@@ -158,9 +119,7 @@
 
                 <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl">
-                            📤
-                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl">📤</div>
                         <span class="text-orange-500 text-sm font-semibold">Dipinjam</span>
                     </div>
                     <p class="text-3xl font-bold text-gray-800" id="stat-borrowed">0</p>
@@ -169,9 +128,7 @@
 
                 <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl">
-                            👥
-                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl">👥</div>
                         <span class="text-purple-500 text-sm font-semibold">Aktif</span>
                     </div>
                     <p class="text-3xl font-bold text-gray-800" id="stat-members">0</p>
@@ -179,68 +136,49 @@
                 </div>
             </div>
 
-            <!-- Quick Actions & Recent -->
+            <!-- Quick Actions -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Quick Actions -->
                 <div class="bg-white rounded-xl p-6 shadow-sm">
                     <h3 class="font-bold text-lg mb-4 text-gray-800">⚡ Aksi Cepat</h3>
                     <div class="grid grid-cols-2 gap-4">
-                        <button onclick="quickAction('borrow')" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-all text-left">
+                        <button onclick="alert('Fitur peminjaman akan segera hadir!')" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-all text-left">
                             <div class="text-2xl mb-2">📤</div>
                             <div class="font-semibold">Pinjamkan Buku</div>
-                            <div class="text-xs text-blue-200">Proses peminjaman</div>
                         </button>
-                        <button onclick="quickAction('return')" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-all text-left">
+                        <button onclick="alert('Fitur pengembalian akan segera hadir!')" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-all text-left">
                             <div class="text-2xl mb-2">📥</div>
                             <div class="font-semibold">Terima Kembali</div>
-                            <div class="text-xs text-green-200">Proses pengembalian</div>
                         </button>
                         <button onclick="showSection('books')" class="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-lg transition-all text-left">
                             <div class="text-2xl mb-2">➕</div>
                             <div class="font-semibold">Tambah Buku</div>
-                            <div class="text-xs text-purple-200">Input buku baru</div>
                         </button>
                         <button onclick="showSection('members')" class="bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-lg transition-all text-left">
                             <div class="text-2xl mb-2">👤</div>
                             <div class="font-semibold">Tambah Anggota</div>
-                            <div class="text-xs text-orange-200">Daftar anggota baru</div>
                         </button>
                     </div>
                 </div>
 
-                <!-- Recent Activity -->
                 <div class="bg-white rounded-xl p-6 shadow-sm">
                     <h3 class="font-bold text-lg mb-4 text-gray-800">🕐 Aktivitas Terbaru</h3>
                     <div id="recent-activity" class="space-y-3 max-h-64 overflow-y-auto">
-                        <p class="text-gray-500 text-center py-8">Memuat aktivitas...</p>
+                        <p class="text-gray-500 text-center py-8">Belum ada aktivitas</p>
                     </div>
-                </div>
-            </div>
-
-            <!-- Alert: Due Soon -->
-            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6" id="alert-due" style="display: none;">
-                <div class="flex items-center gap-3 mb-3">
-                    <span class="text-2xl">⚠️</span>
-                    <h3 class="font-bold text-yellow-800">Buku Jatuh Tempo Hari Ini</h3>
-                </div>
-                <div id="due-list" class="space-y-2">
-                    <!-- Diisi oleh JavaScript -->
                 </div>
             </div>
         </section>
 
-        <!-- SECTION: Books (Hidden by default) -->
+        <!-- SECTION: Books -->
         <section id="section-books" class="hidden space-y-6">
             <div class="bg-white rounded-xl p-6 shadow-sm">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="font-bold text-lg">📖 Daftar Buku</h3>
                     <button onclick="openModal('add-book')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span>➕</span>
-                        <span>Tambah Buku</span>
+                        <span>➕</span><span>Tambah Buku</span>
                     </button>
                 </div>
                 
-                <!-- Search & Filter -->
                 <div class="flex gap-4 mb-4">
                     <input type="text" id="book-search" placeholder="Cari judul, pengarang, atau kode..." 
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -258,7 +196,6 @@
                     </select>
                 </div>
 
-                <!-- Books Table -->
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-gray-50">
@@ -272,16 +209,14 @@
                             </tr>
                         </thead>
                         <tbody id="books-table-body" class="divide-y divide-gray-100">
-                            <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">Memuat data buku...</td>
-                            </tr>
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Memuat data buku...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- SECTION: Members (Hidden) -->
+        <!-- SECTION: Members -->
         <section id="section-members" class="hidden">
             <div class="bg-white rounded-xl p-6 shadow-sm">
                 <h3 class="font-bold text-lg mb-4">👥 Manajemen Anggota</h3>
@@ -289,7 +224,7 @@
             </div>
         </section>
 
-        <!-- SECTION: Circulation (Hidden) -->
+        <!-- SECTION: Circulation -->
         <section id="section-circulation" class="hidden">
             <div class="bg-white rounded-xl p-6 shadow-sm">
                 <h3 class="font-bold text-lg mb-4">🔄 Sirkulasi</h3>
@@ -297,7 +232,7 @@
             </div>
         </section>
 
-        <!-- SECTION: Reports (Hidden) -->
+        <!-- SECTION: Reports -->
         <section id="section-reports" class="hidden">
             <div class="bg-white rounded-xl p-6 shadow-sm">
                 <h3 class="font-bold text-lg mb-4">📈 Laporan</h3>
@@ -370,61 +305,84 @@
         </div>
     </div>
 
-    <!-- Load Scripts -->
+    <!-- Scripts -->
     <script src="../core/db.js"></script>
     <script src="../core/drive-config.js"></script>
     <script src="../core/auth.js"></script>
 
     <script>
-        // Inisialisasi
-        let currentUser = null;
-        let allBooks = [];
+        // State
+        const AppState = {
+            currentUser: null,
+            allBooks: [],
+            isReady: false
+        };
 
+        // Init
         document.addEventListener('DOMContentLoaded', async function() {
-            // Set tanggal
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date').textContent = new Date().toLocaleDateString('id-ID', options);
+            try {
+                await initializeApp();
+            } catch (error) {
+                console.error('Init failed:', error);
+                alert('Gagal memuat aplikasi');
+            }
+        });
 
-            // Cek login
-            await waitForDexie();
-            await dbManager.init();
+        async function initializeApp() {
+            await waitForLibraries();
             
+            const dbInit = await dbManager.init();
+            if (!dbInit) throw new Error('DB init failed');
+
             const isLoggedIn = await authManager.init();
             if (!isLoggedIn) {
-                window.location.href = '../../index.html';
+                redirectToLogin();
                 return;
             }
 
-            currentUser = authManager.getCurrentUser();
-            document.getElementById('user-name').textContent = currentUser.nama || currentUser.email;
-            document.getElementById('user-role').textContent = currentUser.role;
+            AppState.currentUser = authManager.getCurrentUser();
+            if (!AppState.currentUser) {
+                redirectToLogin();
+                return;
+            }
 
-            // Load data
+            AppState.isReady = true;
+
+            // UI
+            document.getElementById('user-name').textContent = AppState.currentUser.nama || AppState.currentUser.email;
+            document.getElementById('user-role').textContent = AppState.currentUser.role;
+            
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('id-ID', options);
+
             await loadDashboardStats();
             await loadBooks();
-            await loadRecentActivity();
-        });
+        }
 
-        function waitForDexie() {
+        function waitForLibraries() {
             return new Promise((resolve) => {
-                if (typeof Dexie !== 'undefined') resolve();
-                else setTimeout(() => waitForDexie().then(resolve), 100);
+                const check = () => {
+                    if (typeof Dexie !== 'undefined' && typeof dbManager !== 'undefined') resolve();
+                    else setTimeout(check, 100);
+                };
+                check();
             });
+        }
+
+        function redirectToLogin() {
+            window.location.replace('../../index.html');
         }
 
         // Navigation
         function showSection(sectionName) {
-            // Hide all sections
             ['dashboard', 'books', 'members', 'circulation', 'reports'].forEach(s => {
                 document.getElementById('section-' + s).classList.add('hidden');
                 document.getElementById('nav-' + s).classList.remove('active');
             });
 
-            // Show selected
             document.getElementById('section-' + sectionName).classList.remove('hidden');
             document.getElementById('nav-' + sectionName).classList.add('active');
 
-            // Update title
             const titles = {
                 'dashboard': 'Dashboard',
                 'books': 'Kelola Buku',
@@ -434,13 +392,10 @@
             };
             document.getElementById('page-title').textContent = titles[sectionName];
 
-            // Load data if needed
-            if (sectionName === 'books') {
-                loadBooks();
-            }
+            if (sectionName === 'books') loadBooks();
         }
 
-        // Load Dashboard Stats
+        // Stats
         async function loadDashboardStats() {
             try {
                 const stats = await dbManager.getStatistics();
@@ -451,18 +406,18 @@
                     document.getElementById('stat-members').textContent = stats.data.total_members;
                 }
             } catch (error) {
-                console.error('Gagal load stats:', error);
+                console.error('Stats error:', error);
             }
         }
 
-        // Load Books
+        // Books
         async function loadBooks() {
             try {
                 const result = await dbManager.getAllBooks();
-                allBooks = result.data || [];
-                renderBooksTable(allBooks);
+                AppState.allBooks = result.data || [];
+                renderBooksTable(AppState.allBooks);
             } catch (error) {
-                console.error('Gagal load books:', error);
+                console.error('Load books error:', error);
             }
         }
 
@@ -486,7 +441,6 @@
                         </span>
                     </td>
                     <td class="px-4 py-3">
-                        <button onclick="editBook(${book.id})" class="text-blue-600 hover:text-blue-800 mr-2">✏️</button>
                         <button onclick="deleteBook(${book.id})" class="text-red-600 hover:text-red-800">🗑️</button>
                     </td>
                 </tr>
@@ -507,7 +461,7 @@
             const search = document.getElementById('book-search').value.toLowerCase();
             const filter = document.getElementById('book-filter').value;
             
-            let filtered = allBooks;
+            let filtered = AppState.allBooks;
             
             if (search) {
                 filtered = filtered.filter(b => 
@@ -524,7 +478,7 @@
             renderBooksTable(filtered);
         }
 
-        // Modal Functions
+        // Modal
         function openModal(modalName) {
             document.getElementById('modal-' + modalName).classList.remove('hidden');
             document.getElementById('modal-' + modalName).classList.add('flex');
@@ -580,95 +534,66 @@
             }
         }
 
-        // Quick Actions
-        function quickAction(action) {
-            if (action === 'borrow') {
-                showSection('circulation');
-                alert('Fitur peminjaman akan segera hadir!');
-            } else if (action === 'return') {
-                showSection('circulation');
-                alert('Fitur pengembalian akan segera hadir!');
-            }
-        }
-
-        // Sync to Drive
+        // Sync
         async function syncToDrive() {
             const statusEl = document.getElementById('sync-status');
             statusEl.textContent = '🟡 Menyinkronkan...';
             
             try {
-                // Cek koneksi
-                if (!driveManager.config.API_KEY.includes('AIza')) {
-                    throw new Error('API Key belum dikonfigurasi dengan benar');
-                }
-                
-                // Export data
                 const data = await dbManager.exportAllData();
-                
-                // Simpan ke Drive (akan diimplementasi lengkap nanti)
-                console.log('Data untuk sync:', data);
+                console.log('Sync data:', data);
                 
                 statusEl.textContent = '🟢 Sync berhasil!';
-                setTimeout(() => {
-                    statusEl.textContent = '🟢 Siap';
-                }, 3000);
-                
+                setTimeout(() => statusEl.textContent = '🟢 Siap', 3000);
             } catch (error) {
                 statusEl.textContent = '🔴 Gagal sync';
-                alert('Gagal sync ke Drive: ' + error.message);
-                console.error(error);
+                alert('Gagal sync: ' + error.message);
             }
         }
 
-        // Load Recent Activity
-        async function loadRecentActivity() {
-            // Dummy data untuk sementara
-            const activities = [
-                { time: '10:30', text: 'Buku "IPA Kelas 4" dipinjam oleh Ahmad (4A)' },
-                { time: '09:15', text: 'Buku "Dongeng Si Kancil" dikembalikan oleh Siti (3B)' },
-                { time: 'Kemarin', text: 'Admin menambah 5 buku baru ke katalog' }
-            ];
+        // PIN Toggle
+        window.togglePinDisplay = function() {
+            const display = document.getElementById('pin-display');
+            const user = AppState.currentUser;
             
-            const container = document.getElementById('recent-activity');
-            container.innerHTML = activities.map(a => `
-                <div class="flex gap-3 items-start p-3 bg-gray-50 rounded-lg">
-                    <span class="text-xs font-semibold text-gray-500 whitespace-nowrap">${a.time}</span>
-                    <span class="text-sm text-gray-700">${a.text}</span>
-                </div>
-            `).join('');
-        }
+            if (!user) return;
+            
+            if (display.textContent === '••••••') {
+                display.textContent = user.pin || 'BELUM SET';
+            } else {
+                display.textContent = '••••••';
+            }
+        };
 
-// Fungsi Logout yang Benar
-function doLogout() {
-    console.log('Logout clicked');
-    
-    // Hapus data login dari browser
-    localStorage.removeItem('perpustakaan_session');
-    localStorage.removeItem('auth_session');
-    
-    // Hapus semua data localStorage yang berhubungan dengan auth
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i);
-        if (key && (key.includes('auth') || key.includes('session') || key.includes('user'))) {
-            localStorage.removeItem(key);
-        }
-    }
-    
-    console.log('Session cleared, redirecting...');
-    
-    // Redirect ke halaman login dengan path yang benar
-    window.location.href = '../../index.html';
-}
+        // LOGOUT - Global function
+        window.logoutPustakawan = function() {
+            console.log('Logout pustakawan...');
+            
+            try {
+                // Clear all storage
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('session') || key.includes('auth'))) keys.push(key);
+                }
+                keys.forEach(k => localStorage.removeItem(k));
 
-        // Toggle tampilkan PIN sendiri
-function toggleMyPin() {
-    const display = document.getElementById('my-pin-display');
-    if (display.textContent === '••••••') {
-        display.textContent = currentUser.pin || 'BELUM SET';
-    } else {
-        display.textContent = '••••••';
-    }
-    }
+                if (window.gapi?.client) window.gapi.client.setToken(null);
+                
+                window.location.replace('../../index.html');
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '../../index.html';
+            }
+        };
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('fixed')) {
+                event.target.classList.add('hidden');
+                event.target.classList.remove('flex');
+            }
+        };
     </script>
 
 </body>
