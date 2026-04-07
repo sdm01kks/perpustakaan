@@ -20,15 +20,13 @@
     <header class="gradient-bg text-white shadow-lg">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">
-                    📚
-                </div>
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">📚</div>
                 <div>
                     <h1 class="font-bold text-lg">Perpustakaan SDM01</h1>
                     <p class="text-xs text-blue-200">Kukusan</p>
                 </div>
             </div>
-            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            <button onclick="window.logoutSiswa()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
                 Logout
             </button>
         </div>
@@ -40,9 +38,7 @@
         <!-- Welcome -->
         <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
             <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl">
-                    👋
-                </div>
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl">👋</div>
                 <div>
                     <h2 class="text-xl font-bold text-gray-800" id="welcome-name">Halo, Siswa!</h2>
                     <p class="text-gray-600" id="welcome-class">Kelas -</p>
@@ -52,11 +48,7 @@
 
         <!-- Status Peminjaman -->
         <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                <span>📖</span>
-                Buku Saya
-            </h3>
-            
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span>📖</span> Buku Saya</h3>
             <div id="my-books" class="space-y-3">
                 <div class="text-center py-8 text-gray-500">
                     <div class="text-4xl mb-2">📚</div>
@@ -67,20 +59,13 @@
 
         <!-- Cari Buku -->
         <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                <span>🔍</span>
-                Cari Buku
-            </h3>
-            
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span>🔍</span> Cari Buku</h3>
             <div class="flex gap-2 mb-4">
                 <input type="text" id="search-input" placeholder="Ketik judul buku..." 
                     class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     onkeypress="if(event.key==='Enter') searchBooks()">
-                <button onclick="searchBooks()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
-                    Cari
-                </button>
+                <button onclick="searchBooks()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">Cari</button>
             </div>
-
             <div id="search-results" class="space-y-3 max-h-64 overflow-y-auto">
                 <p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari buku</p>
             </div>
@@ -105,117 +90,171 @@
     <script src="../core/auth.js"></script>
 
     <script>
-        let currentUser = null;
-        let currentMember = null;
+        // State management
+        const AppState = {
+            currentUser: null,
+            currentMember: null,
+            isReady: false
+        };
 
+        // Inisialisasi aplikasi
         document.addEventListener('DOMContentLoaded', async function() {
-            await waitForDexie();
-            await dbManager.init();
+            try {
+                await initializeApp();
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                alert('Gagal memuat aplikasi. Silakan refresh halaman.');
+            }
+        });
+
+        async function initializeApp() {
+            // Tunggu library siap
+            await waitForLibraries();
             
+            // Init database
+            const dbInit = await dbManager.init();
+            if (!dbInit) throw new Error('Database failed to initialize');
+
+            // Cek autentikasi
             const isLoggedIn = await authManager.init();
             if (!isLoggedIn) {
-                window.location.href = '../../index.html';
+                redirectToLogin();
                 return;
             }
 
-            currentUser = authManager.getCurrentUser();
-            
-            // Ambil data member
-            if (currentUser.member_id) {
-                currentMember = await dbManager.db.members.get(currentUser.member_id);
+            // Set state
+            AppState.currentUser = authManager.getCurrentUser();
+            if (!AppState.currentUser) {
+                redirectToLogin();
+                return;
             }
-            
-            // Update UI
-            document.getElementById('welcome-name').textContent = 'Halo, ' + (currentUser.nama || 'Siswa');
-            document.getElementById('welcome-class').textContent = currentMember ? 'Kelas ' + currentMember.kelas : '';
-            
-            // Load buku yang dipinjam
-            await loadMyBooks();
-        });
 
-        function waitForDexie() {
+            // Load member data jika ada
+            if (AppState.currentUser.member_id) {
+                AppState.currentMember = await dbManager.db.members.get(AppState.currentUser.member_id);
+            }
+
+            AppState.isReady = true;
+
+            // Render UI
+            renderUserInfo();
+            await loadMyBooks();
+        }
+
+        function waitForLibraries() {
             return new Promise((resolve) => {
-                if (typeof Dexie !== 'undefined') resolve();
-                else setTimeout(() => waitForDexie().then(resolve), 100);
+                const check = () => {
+                    if (typeof Dexie !== 'undefined' && typeof dbManager !== 'undefined') {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
             });
         }
 
-        async function loadMyBooks() {
-            if (!currentUser) return;
+        function redirectToLogin() {
+            window.location.replace('../../index.html');
+        }
+
+        function renderUserInfo() {
+            const user = AppState.currentUser;
+            const member = AppState.currentMember;
             
+            document.getElementById('welcome-name').textContent = 'Halo, ' + (user?.nama || 'Siswa');
+            document.getElementById('welcome-class').textContent = member ? 'Kelas ' + member.kelas : '';
+        }
+
+        async function loadMyBooks() {
+            if (!AppState.isReady || !AppState.currentUser) return;
+
+            const container = document.getElementById('my-books');
+            const userId = AppState.currentUser.member_id || AppState.currentUser.id;
+
             try {
                 const loans = await dbManager.db.circulation
                     .where('member_id')
-                    .equals(currentUser.member_id || currentUser.id)
+                    .equals(userId)
                     .and(c => c.status === 'dipinjam')
                     .toArray();
-                
-                const container = document.getElementById('my-books');
-                
+
                 if (loans.length === 0) {
                     container.innerHTML = `
                         <div class="text-center py-8 text-gray-500">
                             <div class="text-4xl mb-2">📚</div>
                             <p>Belum ada buku yang dipinjam</p>
                             <p class="text-sm mt-2">Silakan cari dan pinjam buku di perpustakaan</p>
-                        </div>
-                    `;
+                        </div>`;
                     return;
                 }
-                
-                // Ambil detail buku
-                const books = [];
-                for (const loan of loans) {
-                    const book = await dbManager.db.books.get(loan.book_id);
-                    if (book) {
-                        books.push({ ...loan, book });
-                    }
-                }
-                
-                container.innerHTML = books.map(item => {
+
+                // Ambil detail buku untuk setiap loan
+                const loanDetails = await Promise.all(
+                    loans.map(async (loan) => {
+                        const book = await dbManager.db.books.get(loan.book_id);
+                        return { ...loan, book };
+                    })
+                );
+
+                container.innerHTML = loanDetails.map(item => {
+                    if (!item.book) return ''; // Skip jika buku tidak ditemukan
+
                     const dueDate = new Date(item.due_date);
                     const today = new Date();
                     const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-                    const isOverdue = diffDays < 0;
-                    const isDueSoon = diffDays <= 2 && diffDays >= 0;
                     
+                    let statusClass, statusText;
+                    if (diffDays < 0) {
+                        statusClass = 'bg-red-50 border-red-200';
+                        statusText = `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">⚠️ Terlambat ${Math.abs(diffDays)} hari</span>`;
+                    } else if (diffDays <= 2) {
+                        statusClass = 'bg-yellow-50 border-yellow-200';
+                        statusText = `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">⏰ ${diffDays} hari lagi</span>`;
+                    } else {
+                        statusClass = 'bg-gray-50';
+                        statusText = `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">✅ ${diffDays} hari lagi</span>`;
+                    }
+
                     return `
-                        <div class="border rounded-lg p-4 ${isOverdue ? 'bg-red-50 border-red-200' : isDueSoon ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50'}">
-                            <div class="flex justify-between items-start">
+                        <div class="border rounded-lg p-4 ${statusClass}">
+                            <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <h4 class="font-semibold text-gray-800">${item.book.judul}</h4>
                                     <p class="text-sm text-gray-600">${item.book.pengarang}</p>
                                 </div>
-                                <span class="px-2 py-1 rounded-full text-xs font-semibold ${isOverdue ? 'bg-red-100 text-red-800' : isDueSoon ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
-                                    ${isOverdue ? '⚠️ Terlambat ' + Math.abs(diffDays) + ' hari' : isDueSoon ? '⏰ ' + diffDays + ' hari lagi' : '✅ ' + diffDays + ' hari lagi'}
-                                </span>
+                                ${statusText}
                             </div>
-                            <p class="text-xs text-gray-500 mt-2">Jatuh tempo: ${dueDate.toLocaleDateString('id-ID')}</p>
-                        </div>
-                    `;
+                            <p class="text-xs text-gray-500">Jatuh tempo: ${dueDate.toLocaleDateString('id-ID')}</p>
+                        </div>`;
                 }).join('');
-                
+
             } catch (error) {
                 console.error('Gagal load buku:', error);
+                container.innerHTML = '<p class="text-center text-red-500 py-4">Gagal memuat data buku</p>';
             }
         }
 
         async function searchBooks() {
             const query = document.getElementById('search-input').value.trim();
-            if (!query) return;
-            
             const container = document.getElementById('search-results');
+
+            if (!query) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari buku</p>';
+                return;
+            }
+
             container.innerHTML = '<p class="text-center py-4">Mencari...</p>';
-            
+
             try {
                 const result = await dbManager.getAllBooks({ search: query, status: 'tersedia' });
                 const books = result.data || [];
-                
+
                 if (books.length === 0) {
-                    container.innerHTML = '<p class="text-center py-4 text-gray-500">Tidak ada buku yang tersedia dengan kata kunci tersebut</p>';
+                    container.innerHTML = '<p class="text-center py-4 text-gray-500">Tidak ada buku yang tersedia</p>';
                     return;
                 }
-                
+
                 container.innerHTML = books.slice(0, 5).map(book => `
                     <div class="border rounded-lg p-3 hover:bg-gray-50 transition-all">
                         <div class="flex justify-between items-start">
@@ -229,33 +268,43 @@
                         <p class="text-xs text-gray-500 mt-1">Lokasi: ${book.lokasi_rak}</p>
                     </div>
                 `).join('');
-                
+
             } catch (error) {
                 container.innerHTML = '<p class="text-center py-4 text-red-500">Gagal mencari buku</p>';
             }
         }
 
-       function logout() {
-    console.log('Logging out...');
-    
-    try {
-        // Hapus session
-        localStorage.removeItem('perpustakaan_session');
-        localStorage.removeItem('perpustakaan_user');
-        
-        // Hapus token Google
-        if (typeof gapi !== 'undefined' && gapi.client) {
-            gapi.client.setToken(null);
-        }
-        
-        // Redirect ke login
-        window.location.href = '../../index.html';
-        
-    } catch (error) {
-        console.error('Logout error:', error);
-        window.location.replace('../../index.html');
-    }
-}
+        // LOGOUT - Definisi global
+        window.logoutSiswa = function() {
+            console.log('Logout initiated...');
+            
+            try {
+                // Clear all auth-related storage
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('session') || key.includes('auth') || key.includes('user'))) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                // Clear Google token if exists
+                if (window.gapi && window.gapi.client) {
+                    window.gapi.client.setToken(null);
+                }
+
+                console.log('Logout successful, redirecting...');
+                
+                // Use replace to prevent back button from returning to dashboard
+                window.location.replace('../../index.html');
+                
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Fallback redirect
+                window.location.href = '../../index.html';
+            }
+        };
     </script>
 
 </body>
