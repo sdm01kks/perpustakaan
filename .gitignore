@@ -1,0 +1,29 @@
+# Ignore sensitive files
+credentials.txt
+GOOGLE_CREDENTIALS.txt
+*.key
+*.pem
+
+# Ignore local development files
+node_modules/
+.env
+.env.local
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore backup files
+*.bak
+*.backup
+*~
+
+# Ignore uploaded files (will be in Drive)
+app/uploads/
+data/local-backup/
