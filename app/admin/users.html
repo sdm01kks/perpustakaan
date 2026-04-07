@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen User - Admin</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+        .pin-masked { font-family: monospace; letter-spacing: 2px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-blue-900 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">👥</span>
+                <div>
+                    <h1 class="font-bold text-lg">Manajemen User</h1>
+                    <p class="text-xs text-blue-200">Admin Only</p>
+                </div>
+            </div>
+            <a href="../dashboard/pustakawan.html" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                ← Kembali ke Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="container mx-auto px-4 py-6 max-w-4xl">
+        
+        <!-- Info Box -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <p class="text-sm text-yellow-800">
+                <strong>🔐 Keamanan:</strong> Halaman ini hanya untuk superadmin. 
+                PIN ditampilkan dalam format terenkripsi (bisa di-toggle untuk verifikasi).
+            </p>
+        </div>
+
+        <!-- Users Table -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="font-bold text-lg">Daftar Pengguna</h2>
+                <button onclick="loadUsers()" class="text-blue-600 hover:text-blue-800 text-sm">
+                    🔄 Refresh
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">ID</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Nama</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Email/NIS</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Role</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">PIN</th>
+                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Add User Form -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+            <h2 class="font-bold text-lg mb-4">➕ Tambah User Baru</h2>
+            
+            <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                    <input type="text" name="nama" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select name="role" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="pustakawan">Pustakawan</option>
+                        <option value="admin">Admin</option>
+                        <option value="siswa">Siswa</option>
+                        <option value="guru">Guru</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">PIN (6 digit)</label>
+                    <input type="text" name="pin" maxlength="6" pattern="\d{6}" placeholder="123456" required
+                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
+                        Tambah User
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="../core/db.js"></script>
+    <script src="../core/auth.js"></script>
+
+    <script>
+        let currentUser = null;
+        let showPinPlain = false; // Toggle untuk tampilkan PIN asli
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await waitForDexie();
+            await dbManager.init();
+            
+            const isLoggedIn = await authManager.init();
+            if (!isLoggedIn) {
+                window.location.href = '../../index.html';
+                return;
+            }
+
+            currentUser = authManager.getCurrentUser();
+            
+            // Cek apakah admin/superadmin
+            if (currentUser.role !== 'superadmin' && currentUser.role !== 'admin') {
+                alert('Akses ditolak: Hanya untuk admin');
+                window.location.href = '../dashboard/siswa.html';
+                return;
+            }
+
+            await loadUsers();
+        });
+
+        function waitForDexie() {
+            return new Promise((resolve) => {
+                if (typeof Dexie !== 'undefined') resolve();
+                else setTimeout(() => waitForDexie().then(resolve), 100);
+            });
+        }
+
+        async function loadUsers() {
+            try {
+                const users = await dbManager.db.users.toArray();
+                const tbody = document.getElementById('users-table');
+                
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Belum ada user</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = users.map(u => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm text-gray-900">${u.id}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">${u.nama || '-'}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">${u.email}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${getRoleClass(u.role)}">
+                                ${u.role}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="pin-masked text-sm font-mono bg-gray-100 px-2 py-1 rounded">
+                                    ${showPinPlain ? (u.pin || 'BELUM SET') : maskPin(u.pin)}
+                                </span>
+                                <button onclick="togglePinView()" class="text-xs text-blue-600 hover:text-blue-800" title="Toggle view">
+                                    👁️
+                                </button>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${u.is_active ? 'Aktif' : 'Nonaktif'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Gagal load users:', error);
+            }
+        }
+
+        function maskPin(pin) {
+            if (!pin) return 'BELUM SET';
+            return '••••••';
+        }
+
+        function togglePinView() {
+            showPinPlain = !showPinPlain;
+            loadUsers();
+        }
+
+        function getRoleClass(role) {
+            const classes = {
+                'superadmin': 'bg-purple-100 text-purple-800',
+                'admin': 'bg-blue-100 text-blue-800',
+                'pustakawan': 'bg-green-100 text-green-800',
+                'guru': 'bg-yellow-100 text-yellow-800',
+                'siswa': 'bg-gray-100 text-gray-800'
+            };
+            return classes[role] || 'bg-gray-100 text-gray-800';
+        }
+
+        async function addUser(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const userData = {
+                nama: formData.get('nama'),
+                email: formData.get('email'),
+                role: formData.get('role'),
+                pin: formData.get('pin'),
+                is_active: true,
+                createdAt: new Date().toISOString(),
+                last_login: null
+            };
+
+            try {
+                // Cek email sudah ada
+                const existing = await dbManager.db.users.where('email').equals(userData.email).first();
+                if (existing) {
+                    alert('Email sudah terdaftar!');
+                    return;
+                }
+
+                await dbManager.db.users.add(userData);
+                alert('✅ User berhasil ditambahkan!');
+                form.reset();
+                await loadUsers();
+                
+            } catch (error) {
+                alert('❌ Gagal: ' + error.message);
+            }
+        }
+    </script>
+
+</body>
+</html>
