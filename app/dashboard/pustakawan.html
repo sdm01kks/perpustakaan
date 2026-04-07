@@ -638,29 +638,26 @@
             `).join('');
         }
 
-// Logout
-function logout() {
-    console.log('Logging out...');
+// Fungsi Logout yang Benar
+function doLogout() {
+    console.log('Logout clicked');
     
-    try {
-        // Hapus session dari localStorage
-        localStorage.removeItem('perpustakaan_session');
-        localStorage.removeItem('perpustakaan_user');
-        
-        // Hapus token Google jika ada
-        if (typeof gapi !== 'undefined' && gapi.client) {
-            gapi.client.setToken(null);
+    // Hapus data login dari browser
+    localStorage.removeItem('perpustakaan_session');
+    localStorage.removeItem('auth_session');
+    
+    // Hapus semua data localStorage yang berhubungan dengan auth
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('auth') || key.includes('session') || key.includes('user'))) {
+            localStorage.removeItem(key);
         }
-        
-        // Redirect ke halaman login (perhatikan path-nya)
-        console.log('Redirecting to login...');
-        window.location.href = '../../index.html';
-        
-    } catch (error) {
-        console.error('Error during logout:', error);
-        // Fallback: force redirect
-        window.location.replace('../../index.html');
     }
+    
+    console.log('Session cleared, redirecting...');
+    
+    // Redirect ke halaman login dengan path yang benar
+    window.location.href = '../../index.html';
 }
 
         // Toggle tampilkan PIN sendiri
