@@ -235,10 +235,27 @@
             }
         }
 
-        function logout() {
-            authManager.logout();
-            window.location.href = '../../index.html';
+       function logout() {
+    console.log('Logging out...');
+    
+    try {
+        // Hapus session
+        localStorage.removeItem('perpustakaan_session');
+        localStorage.removeItem('perpustakaan_user');
+        
+        // Hapus token Google
+        if (typeof gapi !== 'undefined' && gapi.client) {
+            gapi.client.setToken(null);
         }
+        
+        // Redirect ke login
+        window.location.href = '../../index.html';
+        
+    } catch (error) {
+        console.error('Logout error:', error);
+        window.location.replace('../../index.html');
+    }
+}
     </script>
 
 </body>
