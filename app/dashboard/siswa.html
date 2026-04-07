@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Siswa - SDM01 Kukusan</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">
+                    📚
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg">Perpustakaan SDM01</h1>
+                    <p class="text-xs text-blue-200">Kukusan</p>
+                </div>
+            </div>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                Logout
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6 max-w-2xl">
+        
+        <!-- Welcome -->
+        <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl">
+                    👋
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800" id="welcome-name">Halo, Siswa!</h2>
+                    <p class="text-gray-600" id="welcome-class">Kelas -</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Peminjaman -->
+        <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                <span>📖</span>
+                Buku Saya
+            </h3>
+            
+            <div id="my-books" class="space-y-3">
+                <div class="text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">📚</div>
+                    <p>Belum ada buku yang dipinjam</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cari Buku -->
+        <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                <span>🔍</span>
+                Cari Buku
+            </h3>
+            
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="search-input" placeholder="Ketik judul buku..." 
+                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    onkeypress="if(event.key==='Enter') searchBooks()">
+                <button onclick="searchBooks()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">
+                    Cari
+                </button>
+            </div>
+
+            <div id="search-results" class="space-y-3 max-h-64 overflow-y-auto">
+                <p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari buku</p>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h4 class="font-semibold text-blue-800 mb-2">📋 Informasi</h4>
+            <ul class="text-sm text-blue-700 space-y-1">
+                <li>• Maksimal pinjam: 2 buku</li>
+                <li>• Durasi: 7 hari</li>
+                <li>• Denda keterlambatan: Rp 1.000/hari</li>
+                <li>• Perpanjangan: 1x (3 hari)</li>
+            </ul>
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="../core/db.js"></script>
+    <script src="../core/drive-config.js"></script>
+    <script src="../core/auth.js"></script>
+
+    <script>
+        let currentUser = null;
+        let currentMember = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await waitForDexie();
+            await dbManager.init();
+            
+            const isLoggedIn = await authManager.init();
+            if (!isLoggedIn) {
+                window.location.href = '../../index.html';
+                return;
+            }
+
+            currentUser = authManager.getCurrentUser();
+            
+            // Ambil data member
+            if (currentUser.member_id) {
+                currentMember = await dbManager.db.members.get(currentUser.member_id);
+            }
+            
+            // Update UI
+            document.getElementById('welcome-name').textContent = 'Halo, ' + (currentUser.nama || 'Siswa');
+            document.getElementById('welcome-class').textContent = currentMember ? 'Kelas ' + currentMember.kelas : '';
+            
+            // Load buku yang dipinjam
+            await loadMyBooks();
+        });
+
+        function waitForDexie() {
+            return new Promise((resolve) => {
+                if (typeof Dexie !== 'undefined') resolve();
+                else setTimeout(() => waitForDexie().then(resolve), 100);
+            });
+        }
+
+        async function loadMyBooks() {
+            if (!currentUser) return;
+            
+            try {
+                const loans = await dbManager.db.circulation
+                    .where('member_id')
+                    .equals(currentUser.member_id || currentUser.id)
+                    .and(c => c.status === 'dipinjam')
+                    .toArray();
+                
+                const container = document.getElementById('my-books');
+                
+                if (loans.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <div class="text-4xl mb-2">📚</div>
+                            <p>Belum ada buku yang dipinjam</p>
+                            <p class="text-sm mt-2">Silakan cari dan pinjam buku di perpustakaan</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Ambil detail buku
+                const books = [];
+                for (const loan of loans) {
+                    const book = await dbManager.db.books.get(loan.book_id);
+                    if (book) {
+                        books.push({ ...loan, book });
+                    }
+                }
+                
+                container.innerHTML = books.map(item => {
+                    const dueDate = new Date(item.due_date);
+                    const today = new Date();
+                    const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                    const isOverdue = diffDays < 0;
+                    const isDueSoon = diffDays <= 2 && diffDays >= 0;
+                    
+                    return `
+                        <div class="border rounded-lg p-4 ${isOverdue ? 'bg-red-50 border-red-200' : isDueSoon ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50'}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">${item.book.judul}</h4>
+                                    <p class="text-sm text-gray-600">${item.book.pengarang}</p>
+                                </div>
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold ${isOverdue ? 'bg-red-100 text-red-800' : isDueSoon ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                    ${isOverdue ? '⚠️ Terlambat ' + Math.abs(diffDays) + ' hari' : isDueSoon ? '⏰ ' + diffDays + ' hari lagi' : '✅ ' + diffDays + ' hari lagi'}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Jatuh tempo: ${dueDate.toLocaleDateString('id-ID')}</p>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Gagal load buku:', error);
+            }
+        }
+
+        async function searchBooks() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+            
+            const container = document.getElementById('search-results');
+            container.innerHTML = '<p class="text-center py-4">Mencari...</p>';
+            
+            try {
+                const result = await dbManager.getAllBooks({ search: query, status: 'tersedia' });
+                const books = result.data || [];
+                
+                if (books.length === 0) {
+                    container.innerHTML = '<p class="text-center py-4 text-gray-500">Tidak ada buku yang tersedia dengan kata kunci tersebut</p>';
+                    return;
+                }
+                
+                container.innerHTML = books.slice(0, 5).map(book => `
+                    <div class="border rounded-lg p-3 hover:bg-gray-50 transition-all">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-gray-800 text-sm">${book.judul}</h4>
+                                <p class="text-xs text-gray-600">${book.pengarang}</p>
+                                <span class="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">${book.kategori_ddc}</span>
+                            </div>
+                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Tersedia</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Lokasi: ${book.lokasi_rak}</p>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                container.innerHTML = '<p class="text-center py-4 text-red-500">Gagal mencari buku</p>';
+            }
+        }
+
+        function logout() {
+            authManager.logout();
+            window.location.href = '../../index.html';
+        }
+    </script>
+
+</body>
+</html>
