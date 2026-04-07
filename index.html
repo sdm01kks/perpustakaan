@@ -149,42 +149,52 @@
         let dbReady = false;
         let authReady = false;
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            showLoading('Menginisialisasi database...');
-            
-            try {
-                // Tunggu Dexie.js load
-                await waitForDexie();
-                
-                // Init database
-                const dbInit = await dbManager.init();
-                if (!dbInit) {
-                    throw new Error('Gagal inisialisasi database');
-                }
-                
-                // Init auth
-                const authInit = await authManager.init();
-                
-                hideLoading();
-                dbReady = true;
-                authReady = true;
-                
-                // Jika sudah login, redirect ke dashboard
-                if (authInit) {
-                    const user = authManager.getCurrentUser();
-                    if (user) {
-                        redirectToDashboard(user.role);
-                    }
-                }
-                
-                console.log('✅ Sistem siap digunakan');
-                
-            } catch (error) {
-                hideLoading();
-                showError('Gagal memuat sistem: ' + error.message);
-                console.error(error);
+    document.addEventListener('DOMContentLoaded', async function() {
+        showLoading('Menginisialisasi sistem...');
+    
+        try {
+            // Tunggu Dexie.js load
+            await waitForDexie();
+        
+            // Init database
+            const dbInit = await dbManager.init();
+            if (!dbInit) {
+            throw new Error('Gagal inisialisasi database');
             }
-        });
+        
+            // Cek apakah sudah setup (ada superadmin dengan PIN)
+            const superadmin = await dbManager.db.users
+                .where('role')
+                .equals('superadmin')
+                .first();
+        
+            if (!superadmin || !superadmin.pin) {
+                // Belum setup, redirect ke halaman setup
+                window.location.href = 'app/setup.html';
+                return;
+            }
+        
+            // Init auth
+            const authInit = await authManager.init();
+        
+            hideLoading();
+        
+            // Jika sudah login, redirect ke dashboard
+            if (authInit) {
+                const user = authManager.getCurrentUser();
+                if (user) {
+                redirectToDashboard(user.role);
+                }
+            }
+        
+            console.log('✅ Sistem siap digunakan');
+        
+        } catch (error) {
+            hideLoading();
+            showError('Gagal memuat sistem: ' + error.message);
+            console.error(error);
+        }
+    });
 
         // Tunggu Dexie load
         function waitForDexie(maxWait = 10000) {
