@@ -63,55 +63,79 @@ class AuthManager {
         return false;
     }
 
-    // Login dengan PIN (untuk pustakawan/siswa)
+    // Login dengan PIN (untuk semua user)
     async loginWithPin(nisOrEmail, pin) {
         try {
-            // Cari user
+            // Cari di tabel users (untuk admin/pustakawan)
             let user = await dbManager.db.users
                 .where('email')
                 .equals(nisOrEmail)
                 .first();
 
-            if (!user && nisOrEmail.includes('@')) {
-                // Coba cari sebagai email ortu
-                user = await dbManager.db.members
-                    .where('email_ortu')
+            // Jika tidak ketemu, coba cari di members untuk siswa
+            if (!user) {
+                const member = await dbManager.db.members
+                    .where('nis')
                     .equals(nisOrEmail)
                     .first();
+            
+                if (member) {
+                    // Buat user record untuk siswa jika belum ada
+                        user = await dbManager.db.users
+                            .where('email')
+                            .equals(member.email_ortu || member.nis + '@student.sdm01')
+                            .first();
+                
+                if (!user) {
+                    // Auto-create user untuk siswa
+                    const userId = await dbManager.db.users.add({
+                        email: member.email_ortu || member.nis + '@student.sdm01',
+                        nama: member.nama_lengkap,
+                        role: 'siswa',
+                        pin: member.nis.slice(-6), // Default PIN: 6 digit terakhir NIS
+                        is_active: true,
+                        createdAt: new Date().toISOString(),
+                        last_login: null,
+                        member_id: member.id
+                    });
+                    user = await dbManager.db.users.get(userId);
+                }
             }
-
-            if (!user) {
-                return { success: false, error: 'User tidak ditemukan' };
-            }
-
-            if (!user.is_active) {
-                return { success: false, error: 'Akun tidak aktif' };
-            }
-
-            // Verifikasi PIN (sederhana, nanti bisa di-hash)
-            if (user.pin !== pin) {
-                return { success: false, error: 'PIN salah' };
-            }
-
-            // Update last login
-            await dbManager.db.users.update(user.id, {
-                last_login: new Date().toISOString()
-            });
-
-            // Set session
-            this.currentUser = user;
-            localStorage.setItem(this.sessionKey, JSON.stringify(user));
-
-            return { 
-                success: true, 
-                user: user,
-                role: user.role,
-                redirect: this.getDefaultRoute(user.role)
-            };
-        } catch (error) {
-            return { success: false, error: error.message };
         }
+
+        if (!user) {
+            return { success: false, error: 'Email/NIS tidak ditemukan' };
+        }
+
+        if (!user.is_active) {
+            return { success: false, error: 'Akun tidak aktif' };
+        }
+
+        // Verifikasi PIN
+        if (user.pin !== pin) {
+            return { success: false, error: 'PIN salah' };
+        }
+
+        // Update last login
+        await dbManager.db.users.update(user.id, {
+            last_login: new Date().toISOString()
+        });
+
+        // Set session
+        this.currentUser = user;
+        localStorage.setItem(this.sessionKey, JSON.stringify(user));
+
+        return { 
+            success: true, 
+            user: user,
+            role: user.role,
+            redirect: this.getDefaultRoute(user.role)
+        };
+    } catch (error) {
+        console.error('Login error:', error);
+        return { success: false, error: error.message };
     }
+}
 
     // Login dengan Google (untuk superadmin/admin)
     async loginWithGoogle() {
