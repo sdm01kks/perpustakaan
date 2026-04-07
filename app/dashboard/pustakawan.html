@@ -651,6 +651,16 @@
                 event.target.classList.remove('flex');
             }
         }
+
+        // Toggle tampilkan PIN sendiri
+function toggleMyPin() {
+    const display = document.getElementById('my-pin-display');
+    if (display.textContent === '••••••') {
+        display.textContent = currentUser.pin || 'BELUM SET';
+    } else {
+        display.textContent = '••••••';
+    }
+    }
     </script>
 
 </body>
