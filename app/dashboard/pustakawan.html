@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
         body { font-family: 'Nunito', sans-serif; }
@@ -20,7 +21,6 @@
 
     <!-- Sidebar -->
     <aside class="sidebar w-64 text-white flex flex-col fixed h-full overflow-y-auto">
-        <!-- Logo -->
         <div class="p-6 border-b border-blue-400/30">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg">📚</div>
@@ -31,7 +31,6 @@
             </div>
         </div>
 
-        <!-- Menu -->
         <nav class="flex-1 py-4">
             <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
                 <span class="text-xl">📊</span><span>Dashboard</span>
@@ -42,11 +41,8 @@
             <a href="#" onclick="showSection('members')" id="nav-members" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
                 <span class="text-xl">👥</span><span>Anggota</span>
             </a>
-            <a href="#" onclick="showSection('circulation')" id="nav-circulation" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">🔄</span><span>Sirkulasi</span>
-            </a>
-            <a href="#" onclick="showSection('reports')" id="nav-reports" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">📈</span><span>Laporan</span>
+            <a href="sirkulasi.html" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
+                <span class="text-xl">🔄</span><span>Sirkulasi →</span>
             </a>
         </nav>
 
@@ -69,9 +65,8 @@
                 <p id="pin-display" class="text-center font-mono text-lg tracking-widest text-white">••••••</p>
             </div>
             
-            <!-- Logout Button - PENTING: onclick="logoutPustakawan()" -->
-            <button onclick="logoutPustakawan()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2">
-                <span>🚪</span><span>Logout</span>
+            <button onclick="logoutPustakawan()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold transition-all">
+                🚪 Logout
             </button>
         </div>
     </aside>
@@ -86,12 +81,12 @@
                 <p class="text-gray-600" id="current-date">Memuat tanggal...</p>
             </div>
             <div class="flex gap-3">
-                <button onclick="syncToDrive()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
-                    <span>☁️</span><span>Sync ke Drive</span>
+                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span>📊</span><span>Export Excel</span>
                 </button>
-                <div class="bg-white px-4 py-2 rounded-lg shadow text-sm text-gray-600">
-                    <span id="sync-status">🟢 Siap</span>
-                </div>
+                <button onclick="syncToDrive()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span>☁️</span><span>Sync Drive</span>
+                </button>
             </div>
         </header>
 
@@ -137,34 +132,33 @@
             </div>
 
             <!-- Quick Actions -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 class="font-bold text-lg mb-4 text-gray-800">⚡ Aksi Cepat</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <button onclick="alert('Fitur peminjaman akan segera hadir!')" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-all text-left">
-                            <div class="text-2xl mb-2">📤</div>
-                            <div class="font-semibold">Pinjamkan Buku</div>
-                        </button>
-                        <button onclick="alert('Fitur pengembalian akan segera hadir!')" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-all text-left">
-                            <div class="text-2xl mb-2">📥</div>
-                            <div class="font-semibold">Terima Kembali</div>
-                        </button>
-                        <button onclick="showSection('books')" class="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-lg transition-all text-left">
-                            <div class="text-2xl mb-2">➕</div>
-                            <div class="font-semibold">Tambah Buku</div>
-                        </button>
-                        <button onclick="showSection('members')" class="bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-lg transition-all text-left">
-                            <div class="text-2xl mb-2">👤</div>
-                            <div class="font-semibold">Tambah Anggota</div>
-                        </button>
-                    </div>
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">⚡ Aksi Cepat</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <a href="sirkulasi.html" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-all text-center block">
+                        <div class="text-2xl mb-2">📤</div>
+                        <div class="font-semibold text-sm">Pinjamkan</div>
+                    </a>
+                    <a href="sirkulasi.html?tab=kembali" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-all text-center block">
+                        <div class="text-2xl mb-2">📥</div>
+                        <div class="font-semibold text-sm">Terima Kembali</div>
+                    </a>
+                    <button onclick="showSection('books')" class="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-lg transition-all text-center">
+                        <div class="text-2xl mb-2">➕</div>
+                        <div class="font-semibold text-sm">Tambah Buku</div>
+                    </button>
+                    <button onclick="showSection('members')" class="bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-lg transition-all text-center">
+                        <div class="text-2xl mb-2">👤</div>
+                        <div class="font-semibold text-sm">Tambah Anggota</div>
+                    </button>
                 </div>
+            </div>
 
-                <div class="bg-white rounded-xl p-6 shadow-sm">
-                    <h3 class="font-bold text-lg mb-4 text-gray-800">🕐 Aktivitas Terbaru</h3>
-                    <div id="recent-activity" class="space-y-3 max-h-64 overflow-y-auto">
-                        <p class="text-gray-500 text-center py-8">Belum ada aktivitas</p>
-                    </div>
+            <!-- Recent Loans -->
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">🕐 Peminjaman Terbaru</h3>
+                <div id="recent-loans" class="space-y-3 max-h-64 overflow-y-auto">
+                    <p class="text-gray-500 text-center py-4">Memuat...</p>
                 </div>
             </div>
         </section>
@@ -172,11 +166,16 @@
         <!-- SECTION: Books -->
         <section id="section-books" class="hidden space-y-6">
             <div class="bg-white rounded-xl p-6 shadow-sm">
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
                     <h3 class="font-bold text-lg">📖 Daftar Buku</h3>
-                    <button onclick="openModal('add-book')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span>➕</span><span>Tambah Buku</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="printAllLabels()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                            <span>🖨️</span><span>Cetak Label QR</span>
+                        </button>
+                        <button onclick="openModal('add-book')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                            <span>➕</span><span>Tambah Buku</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="flex gap-4 mb-4">
@@ -217,26 +216,37 @@
         </section>
 
         <!-- SECTION: Members -->
-        <section id="section-members" class="hidden">
+        <section id="section-members" class="hidden space-y-6">
             <div class="bg-white rounded-xl p-6 shadow-sm">
-                <h3 class="font-bold text-lg mb-4">👥 Manajemen Anggota</h3>
-                <p class="text-gray-600">Fitur ini akan segera hadir...</p>
-            </div>
-        </section>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold text-lg">👥 Daftar Anggota</h3>
+                    <button onclick="openModal('add-member')" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <span>➕</span><span>Tambah Anggota</span>
+                    </button>
+                </div>
 
-        <!-- SECTION: Circulation -->
-        <section id="section-circulation" class="hidden">
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <h3 class="font-bold text-lg mb-4">🔄 Sirkulasi</h3>
-                <p class="text-gray-600">Fitur ini akan segera hadir...</p>
-            </div>
-        </section>
+                <div class="flex gap-4 mb-4">
+                    <input type="text" id="member-search" placeholder="Cari NIS atau nama..." 
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                        onkeyup="searchMembers()">
+                </div>
 
-        <!-- SECTION: Reports -->
-        <section id="section-reports" class="hidden">
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <h3 class="font-bold text-lg mb-4">📈 Laporan</h3>
-                <p class="text-gray-600">Fitur ini akan segera hadir...</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">NIS</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Nama</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Kelas</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-table-body" class="divide-y divide-gray-100">
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Memuat data anggota...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
 
@@ -305,6 +315,63 @@
         </div>
     </div>
 
+    <!-- Modal: Add Member -->
+    <div id="modal-add-member" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">➕ Tambah Anggota Baru</h3>
+                <button onclick="closeModal('add-member')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <form onsubmit="saveMember(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">NIS *</label>
+                        <input type="text" name="nis" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Kelas *</label>
+                        <select name="kelas" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                            <option value="1A">1A</option>
+                            <option value="1B">1B</option>
+                            <option value="2A">2A</option>
+                            <option value="2B">2B</option>
+                            <option value="3A">3A</option>
+                            <option value="3B">3B</option>
+                            <option value="4A">4A</option>
+                            <option value="4B">4B</option>
+                            <option value="5A">5A</option>
+                            <option value="5B">5B</option>
+                            <option value="6A">6A</option>
+                            <option value="6B">6B</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
+                    <input type="text" name="nama_lengkap" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">No. HP (opsional)</label>
+                        <input type="tel" name="no_hp" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Ortu (opsional)</label>
+                        <input type="email" name="email_ortu" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('add-member')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">Simpan Anggota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="../core/db.js"></script>
     <script src="../core/drive-config.js"></script>
@@ -315,6 +382,7 @@
         const AppState = {
             currentUser: null,
             allBooks: [],
+            allMembers: [],
             isReady: false
         };
 
@@ -336,27 +404,30 @@
 
             const isLoggedIn = await authManager.init();
             if (!isLoggedIn) {
-                redirectToLogin();
+                window.location.replace('../../index.html');
                 return;
             }
 
             AppState.currentUser = authManager.getCurrentUser();
             if (!AppState.currentUser) {
-                redirectToLogin();
+                window.location.replace('../../index.html');
                 return;
             }
 
             AppState.isReady = true;
 
-            // UI
             document.getElementById('user-name').textContent = AppState.currentUser.nama || AppState.currentUser.email;
             document.getElementById('user-role').textContent = AppState.currentUser.role;
             
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('current-date').textContent = new Date().toLocaleDateString('id-ID', options);
 
-            await loadDashboardStats();
-            await loadBooks();
+            await Promise.all([
+                loadDashboardStats(),
+                loadBooks(),
+                loadMembers(),
+                loadRecentLoans()
+            ]);
         }
 
         function waitForLibraries() {
@@ -369,13 +440,9 @@
             });
         }
 
-        function redirectToLogin() {
-            window.location.replace('../../index.html');
-        }
-
         // Navigation
         function showSection(sectionName) {
-            ['dashboard', 'books', 'members', 'circulation', 'reports'].forEach(s => {
+            ['dashboard', 'books', 'members'].forEach(s => {
                 document.getElementById('section-' + s).classList.add('hidden');
                 document.getElementById('nav-' + s).classList.remove('active');
             });
@@ -386,13 +453,12 @@
             const titles = {
                 'dashboard': 'Dashboard',
                 'books': 'Kelola Buku',
-                'members': 'Manajemen Anggota',
-                'circulation': 'Sirkulasi',
-                'reports': 'Laporan'
+                'members': 'Manajemen Anggota'
             };
             document.getElementById('page-title').textContent = titles[sectionName];
 
             if (sectionName === 'books') loadBooks();
+            if (sectionName === 'members') loadMembers();
         }
 
         // Stats
@@ -441,7 +507,8 @@
                         </span>
                     </td>
                     <td class="px-4 py-3">
-                        <button onclick="deleteBook(${book.id})" class="text-red-600 hover:text-red-800">🗑️</button>
+                        <button onclick="printBookQR(${book.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Cetak QR">🖨️</button>
+                        <button onclick="deleteBook(${book.id})" class="text-red-600 hover:text-red-800" title="Hapus">🗑️</button>
                     </td>
                 </tr>
             `).join('');
@@ -476,6 +543,58 @@
             }
             
             renderBooksTable(filtered);
+        }
+
+        // Members
+        async function loadMembers() {
+            try {
+                const result = await dbManager.getAllMembers();
+                AppState.allMembers = result.data || [];
+                renderMembersTable(AppState.allMembers);
+            } catch (error) {
+                console.error('Load members error:', error);
+            }
+        }
+
+        function renderMembersTable(members) {
+            const tbody = document.getElementById('members-table-body');
+            
+            if (members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Belum ada data anggota. Klik "Tambah Anggota" untuk mulai.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = members.map(member => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${member.nis}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${member.nama_lengkap}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${member.kelas}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${member.status === 'aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${member.status || 'aktif'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="printMemberCard(${member.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Cetak Kartu">🪪</button>
+                        <button onclick="deleteMember(${member.id})" class="text-red-600 hover:text-red-800" title="Hapus">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function searchMembers() {
+            const search = document.getElementById('member-search').value.toLowerCase();
+            
+            let filtered = AppState.allMembers;
+            
+            if (search) {
+                filtered = filtered.filter(m => 
+                    m.nis.toLowerCase().includes(search) ||
+                    m.nama_lengkap.toLowerCase().includes(search)
+                );
+            }
+            
+            renderMembersTable(filtered);
         }
 
         // Modal
@@ -521,7 +640,46 @@
             }
         }
 
-        // Delete Book
+        // Save Member
+        async function saveMember(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const memberData = {
+                nis: formData.get('nis'),
+                nama_lengkap: formData.get('nama_lengkap'),
+                kelas: formData.get('kelas'),
+                no_hp: formData.get('no_hp') || null,
+                email_ortu: formData.get('email_ortu') || null,
+                tipe_anggota: 'siswa',
+                status: 'aktif'
+            };
+
+            try {
+                // Cek NIS sudah ada
+                const existing = await dbManager.db.members.where('nis').equals(memberData.nis).first();
+                if (existing) {
+                    alert('NIS sudah terdaftar!');
+                    return;
+                }
+
+                const result = await dbManager.addMember(memberData);
+                if (result.success) {
+                    closeModal('add-member');
+                    form.reset();
+                    await loadMembers();
+                    await loadDashboardStats();
+                    alert('✅ Anggota berhasil ditambahkan!');
+                } else {
+                    alert('❌ Gagal: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Delete
         async function deleteBook(id) {
             if (!confirm('Yakin ingin menghapus buku ini?')) return;
             
@@ -534,28 +692,251 @@
             }
         }
 
-        // Sync
-        async function syncToDrive() {
-            const statusEl = document.getElementById('sync-status');
-            statusEl.textContent = '🟡 Menyinkronkan...';
+        async function deleteMember(id) {
+            if (!confirm('Yakin ingin menghapus anggota ini?')) return;
             
             try {
-                const data = await dbManager.exportAllData();
-                console.log('Sync data:', data);
-                
-                statusEl.textContent = '🟢 Sync berhasil!';
-                setTimeout(() => statusEl.textContent = '🟢 Siap', 3000);
+                await dbManager.db.members.delete(id);
+                await loadMembers();
+                await loadDashboardStats();
             } catch (error) {
-                statusEl.textContent = '🔴 Gagal sync';
-                alert('Gagal sync: ' + error.message);
+                alert('Gagal menghapus: ' + error.message);
             }
+        }
+
+        // QR & Print
+        async function printBookQR(bookId) {
+            try {
+                const book = await dbManager.db.books.get(bookId);
+                if (!book) {
+                    alert('Buku tidak ditemukan');
+                    return;
+                }
+                
+                const printWindow = window.open('', '_blank');
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(book.kode_aksesi)}`;
+                
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Label ${book.kode_aksesi}</title>
+                        <style>
+                            body { font-family: Arial; text-align: center; padding: 20px; }
+                            .label { border: 2px dashed #999; padding: 20px; display: inline-block; }
+                            img { width: 150px; height: 150px; }
+                            .kode { font-size: 18px; font-weight: bold; margin: 10px 0; }
+                            .judul { font-size: 14px; color: #666; max-width: 200px; }
+                            @media print { .no-print { display: none; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="no-print" style="margin-bottom: 20px;">
+                            <button onclick="window.print()">🖨️ Cetak</button>
+                        </div>
+                        <div class="label">
+                            <img src="${qrUrl}" alt="QR">
+                            <div class="kode">${book.kode_aksesi}</div>
+                            <div class="judul">${book.judul}</div>
+                        </div>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                
+            } catch (error) {
+                alert('Gagal mencetak: ' + error.message);
+            }
+        }
+
+        async function printMemberCard(memberId) {
+            try {
+                const member = await dbManager.db.members.get(memberId);
+                if (!member) {
+                    alert('Anggota tidak ditemukan');
+                    return;
+                }
+                
+                const printWindow = window.open('', '_blank');
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(member.nis)}`;
+                
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Kartu ${member.nama_lengkap}</title>
+                        <style>
+                            @page { size: 85.6mm 54mm; margin: 0; }
+                            body { margin: 0; font-family: Arial; }
+                            .card {
+                                width: 85.6mm; height: 54mm;
+                                background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+                                color: white; padding: 8mm; box-sizing: border-box;
+                                display: flex; flex-direction: column; justify-content: space-between;
+                            }
+                            .header { display: flex; justify-content: space-between; align-items: center; }
+                            .school { font-size: 10pt; font-weight: bold; }
+                            .type { font-size: 8pt; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; }
+                            .body { display: flex; justify-content: space-between; align-items: center; }
+                            .info { flex: 1; }
+                            .name { font-size: 12pt; font-weight: bold; margin-bottom: 2mm; }
+                            .detail { font-size: 9pt; opacity: 0.9; }
+                            .qr img { width: 20mm; height: 20mm; background: white; padding: 2mm; border-radius: 3mm; }
+                            .footer { font-size: 7pt; text-align: center; opacity: 0.8; }
+                            @media print { 
+                                .no-print { display: none; }
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="no-print" style="margin: 20px; text-align: center;">
+                            <button onclick="window.print()">🖨️ Cetak Kartu</button>
+                        </div>
+                        <div class="card">
+                            <div class="header">
+                                <div class="school">SD MUHAMMADIYAH 01 KUKUSAN</div>
+                                <div class="type">KARTU ANGGOTA</div>
+                            </div>
+                            <div class="body">
+                                <div class="info">
+                                    <div class="name">${member.nama_lengkap}</div>
+                                    <div class="detail">NIS: ${member.nis}</div>
+                                    <div class="detail">Kelas: ${member.kelas}</div>
+                                </div>
+                                <div class="qr">
+                                    <img src="${qrUrl}" alt="QR">
+                                </div>
+                            </div>
+                            <div class="footer">
+                                Berlaku selama menjadi siswa aktif
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                
+            } catch (error) {
+                alert('Gagal mencetak: ' + error.message);
+            }
+        }
+
+        function printAllLabels() {
+            if (AppState.allBooks.length === 0) {
+                alert('Belum ada buku untuk dicetak');
+                return;
+            }
+            
+            const printWindow = window.open('', '_blank');
+            const labels = AppState.allBooks.map(book => {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(book.kode_aksesi)}`;
+                return `
+                    <div style="border: 1px dashed #999; padding: 10px; text-align: center; display: inline-block; margin: 5px; width: 150px;">
+                        <img src="${qrUrl}" style="width: 100px; height: 100px;">
+                        <div style="font-size: 12px; font-weight: bold; margin: 5px 0;">${book.kode_aksesi}</div>
+                        <div style="font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${book.judul}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Label Buku</title>
+                    <style>
+                        body { font-family: Arial; padding: 20px; }
+                        .sheet { display: flex; flex-wrap: wrap; gap: 10px; }
+                        @media print { .no-print { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print" style="margin-bottom: 20px;">
+                        <button onclick="window.print()">🖨️ Cetak Semua Label</button>
+                    </div>
+                    <div class="sheet">
+                        ${labels}
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // Recent Loans
+        async function loadRecentLoans() {
+            try {
+                const loans = await dbManager.db.circulation
+                    .where('status')
+                    .equals('dipinjam')
+                    .reverse()
+                    .limit(5)
+                    .toArray();
+
+                const container = document.getElementById('recent-loans');
+                
+                if (loans.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-4">Tidak ada peminjaman aktif</p>';
+                    return;
+                }
+
+                const details = await Promise.all(
+                    loans.map(async (loan) => {
+                        const [book, member] = await Promise.all([
+                            dbManager.db.books.get(loan.book_id),
+                            dbManager.db.members.get(loan.member_id)
+                        ]);
+                        return { ...loan, book, member };
+                    })
+                );
+
+                container.innerHTML = details.map(item => `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="font-semibold text-sm">${item.book?.judul || '-'}</p>
+                            <p class="text-xs text-gray-600">${item.member?.nama_lengkap || '-'} (${item.member?.kelas || '-'})</p>
+                        </div>
+                        <span class="text-xs text-gray-500">${new Date(item.due_date).toLocaleDateString('id-ID')}</span>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Load loans error:', error);
+            }
+        }
+
+        // Export
+        async function exportToExcel() {
+            try {
+                const data = await dbManager.exportAllData();
+                const jsonStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup-perpustakaan-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('✅ Data berhasil di-export!');
+            } catch (error) {
+                alert('Gagal export: ' + error.message);
+            }
+        }
+
+        // Sync
+        async function syncToDrive() {
+            alert('Fitur sync ke Google Drive akan diimplementasikan di update berikutnya.\n\nUntuk saat ini, gunakan Export Excel sebagai backup.');
         }
 
         // PIN Toggle
         window.togglePinDisplay = function() {
             const display = document.getElementById('pin-display');
             const user = AppState.currentUser;
-            
             if (!user) return;
             
             if (display.textContent === '••••••') {
@@ -565,26 +946,16 @@
             }
         };
 
-        // LOGOUT - Global function
+        // Logout
         window.logoutPustakawan = function() {
-            console.log('Logout pustakawan...');
-            
-            try {
-                // Clear all storage
-                const keys = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.includes('session') || key.includes('auth'))) keys.push(key);
+            localStorage.removeItem('perpustakaan_session');
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('session') || key.includes('auth'))) {
+                    localStorage.removeItem(key);
                 }
-                keys.forEach(k => localStorage.removeItem(k));
-
-                if (window.gapi?.client) window.gapi.client.setToken(null);
-                
-                window.location.replace('../../index.html');
-            } catch (error) {
-                console.error('Logout error:', error);
-                window.location.href = '../../index.html';
             }
+            window.location.replace('../../index.html');
         };
 
         // Close modal on outside click
