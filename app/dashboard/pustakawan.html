@@ -638,19 +638,30 @@
             `).join('');
         }
 
-        // Logout
-        function logout() {
-            authManager.logout();
-            window.location.href = '../../index.html';
+// Logout
+function logout() {
+    console.log('Logging out...');
+    
+    try {
+        // Hapus session dari localStorage
+        localStorage.removeItem('perpustakaan_session');
+        localStorage.removeItem('perpustakaan_user');
+        
+        // Hapus token Google jika ada
+        if (typeof gapi !== 'undefined' && gapi.client) {
+            gapi.client.setToken(null);
         }
-
-        // Close modal on outside click
-        window.onclick = function(event) {
-            if (event.target.classList.contains('fixed')) {
-                event.target.classList.add('hidden');
-                event.target.classList.remove('flex');
-            }
-        }
+        
+        // Redirect ke halaman login (perhatikan path-nya)
+        console.log('Redirecting to login...');
+        window.location.href = '../../index.html';
+        
+    } catch (error) {
+        console.error('Error during logout:', error);
+        // Fallback: force redirect
+        window.location.replace('../../index.html');
+    }
+}
 
         // Toggle tampilkan PIN sendiri
 function toggleMyPin() {
