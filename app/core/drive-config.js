@@ -14,7 +14,7 @@ const DRIVE_CONFIG = {
     CLIENT_ID: '651081925275-ca4lhpcrh71nvpe0jltgqbr9tisaal1j.apps.googleusercontent.com',
     
     // Scopes yang diperlukan
-    SCOPES: 'https://www.googleapis.com/auth/drive.file',
+    SCOPES: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
     
     // Nama folder di Google Drive
     FOLDER_NAME: 'SDM01-Perpustakaan',
