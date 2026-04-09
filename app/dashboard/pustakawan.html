@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         body { font-family: 'Nunito', sans-serif; }
@@ -81,11 +82,14 @@
                 <p class="text-gray-600" id="current-date">Memuat tanggal...</p>
             </div>
             <div class="flex gap-3">
-                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span>📊</span><span>Export Excel</span>
+                <button onclick="showImportModal('books')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span>📥</span><span>Import Buku</span>
                 </button>
-                <button onclick="syncToDrive()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span>☁️</span><span>Sync Drive</span>
+                <button onclick="showImportModal('members')" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span>📥</span><span>Import Anggota</span>
+                </button>
+                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span>📊</span><span>Export</span>
                 </button>
             </div>
         </header>
@@ -372,6 +376,75 @@
         </div>
     </div>
 
+    <!-- Modal: Import Data -->
+    <div id="modal-import" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg" id="import-title">📥 Import Data</h3>
+                <button onclick="closeModal('import')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+        
+            <div class="space-y-4">
+                <!-- Download Template -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-800 mb-2">📋 Langkah 1: Download Template</h4>
+                    <p class="text-sm text-blue-700 mb-3">Download file template, isi dengan data Anda, lalu upload.</p>
+                    <button onclick="downloadTemplate()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" id="btn-download-template">
+                        ⬇️ Download Template Excel
+                    </button>
+                </div>
+
+                <!-- Upload File -->
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-green-800 mb-2">📤 Langkah 2: Upload File</h4>
+                    <p class="text-sm text-green-700 mb-3">Format yang didukung: .xlsx, .xls, .csv</p>
+                
+                    <div class="border-2 border-dashed border-green-300 rounded-lg p-6 text-center">
+                        <input type="file" id="import-file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileSelect(this)">
+                        <label for="import-file" class="cursor-pointer">
+                            <div class="text-4xl mb-2">📁</div>
+                            <p class="text-green-700 font-medium">Klik untuk pilih file</p>
+                            <p class="text-sm text-green-600" id="file-name">atau drag & drop di sini</p>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Preview & Import -->
+                <div id="import-preview" class="hidden">
+                    <h4 class="font-semibold text-gray-800 mb-2">👁️ Preview Data</h4>
+                    <div class="bg-gray-50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                        <table class="w-full text-sm" id="preview-table">
+                            <!-- Preview content -->
+                        </table>
+                    </div>
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="text-sm text-gray-600" id="import-stats"></span>
+                        <button onclick="processImport()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold">
+                            ✅ Proses Import
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div id="import-progress" class="hidden">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Mengimport...</span>
+                        <span id="progress-text">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progress-bar" class="bg-green-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div id="import-results" class="hidden">
+                    <h4 class="font-semibold text-gray-800 mb-2">📊 Hasil Import</h4>
+                    <div class="space-y-2" id="results-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+        
     <!-- Scripts -->
     <script src="../core/db.js"></script>
     <script src="../core/drive-config.js"></script>
@@ -965,6 +1038,305 @@
                 event.target.classList.remove('flex');
             }
         };
+
+        // ==================== IMPORT EXCEL/CSV ====================
+
+        let importType = ''; // 'books' atau 'members'
+        let importData = []; // Data yang akan diimport
+        let importFileName = '';
+
+        function showImportModal(type) {
+            importType = type;
+            importData = [];
+            importFileName = '';
+    
+            // Reset UI
+            document.getElementById('import-file').value = '';
+            document.getElementById('file-name').textContent = 'atau drag & drop di sini';
+            document.getElementById('import-preview').classList.add('hidden');
+            document.getElementById('import-progress').classList.add('hidden');
+            document.getElementById('import-results').classList.add('hidden');
+    
+            // Set title
+            const titles = {
+                'books': '📥 Import Data Buku',
+                'members': '📥 Import Data Anggota'
+            };
+            document.getElementById('import-title').textContent = titles[type];
+    
+            // Set button text
+            const btnTexts = {
+                'books': '⬇️ Download Template Buku',
+                'members': '⬇️ Download Template Anggota'
+            };
+            document.getElementById('btn-download-template').textContent = btnTexts[type];
+    
+            openModal('import');
+        }
+
+        function downloadTemplate() {
+            let data, filename, headers;
+    
+            if (importType === 'books') {
+                headers = ['kode_aksesi', 'judul', 'pengarang', 'penerbit', 'tahun_terbit', 'kategori_ddc', 'lokasi_rak', 'isbn'];
+                data = [
+                    ['500-001-2024', 'Matematika SD Kelas 4', 'Tim Erlangga', 'Erlangga', 2024, '500', 'Rak A-1', '978-602-1234-01'],
+                    ['F-045-2023', 'Dongeng Si Kancil', 'Riri Khasmita', 'Gramedia', 2023, 'F', 'Rak B-2', ''],
+                    ['200-012-2024', 'Pendidikan Agama Islam', 'Ahmad Syafi\'i', 'Bumi Aksara', 2024, '200', 'Rak C-1', '978-602-1234-03']
+                ];
+                filename = 'template-buku.xlsx';
+            } else {
+                headers = ['nis', 'nama_lengkap', 'kelas', 'no_hp', 'email_ortu'];
+                data = [
+                    ['2024001', 'Ahmad Fauzi', '4A', '081234567890', 'ortu.ahmad@email.com'],
+                    ['2024002', 'Siti Nurjanah', '4A', '081234567891', 'ortu.siti@email.com'],
+                    ['2024003', 'Budi Santoso', '4B', '081234567892', 'ortu.budi@email.com']
+                ];
+                filename = 'template-anggota.xlsx';
+        }
+    
+        // Buat worksheet
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    
+        // Download
+        XLSX.writeFile(wb, filename);
+        }
+
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+    
+            importFileName = file.name;
+            document.getElementById('file-name').textContent = file.name;
+    
+            const reader = new FileReader();
+    
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+            
+                    // Ambil sheet pertama
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+                    if (jsonData.length < 2) {
+                        alert('File kosong atau tidak valid!');
+                        return;
+                    }
+            
+                    // Parse data
+                    const headers = jsonData[0].map(h => String(h).toLowerCase().trim());
+                    const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== ''));
+            
+                    importData = rows.map(row => {
+                        const obj = {};
+                        headers.forEach((header, index) => {
+                            obj[header] = row[index] || '';
+                    });
+                    return obj;
+                });
+            
+                // Validasi kolom wajib
+                const required = importType === 'books' 
+                    ? ['judul', 'pengarang', 'penerbit', 'kategori_ddc', 'lokasi_rak']
+                    : ['nis', 'nama_lengkap', 'kelas'];
+            
+                const missing = required.filter(r => !headers.includes(r));
+                if (missing.length > 0) {
+                    alert('Kolom wajib tidak ditemukan: ' + missing.join(', '));
+                    return;
+                }
+            
+                // Tampilkan preview
+                showPreview();
+            
+                } catch (error) {
+                alert('Gagal membaca file: ' + error.message);
+                console.error(error);
+                }
+            };
+    
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showPreview() {
+            const previewDiv = document.getElementById('import-preview');
+            const table = document.getElementById('preview-table');
+            const stats = document.getElementById('import-stats');
+    
+            // Tampilkan 5 baris pertama
+            const previewData = importData.slice(0, 5);
+            const headers = Object.keys(previewData[0] || {});
+    
+            let html = '<thead class="bg-gray-100"><tr>';
+            headers.forEach(h => {
+                html += `<th class="px-2 py-1 text-left font-semibold">${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+    
+            previewData.forEach(row => {
+                html += '<tr class="border-t">';
+                headers.forEach(h => {
+                    html += `<td class="px-2 py-1">${row[h] || '-'}</td>`;
+                });
+                html += '</tr>';
+            });
+    
+            if (importData.length > 5) {
+                html += `<tr class="text-center text-gray-500"><td colspan="${headers.length}" class="py-2">... dan ${importData.length - 5} baris lainnya</td></tr>`;
+            }
+    
+            html += '</tbody>';
+            table.innerHTML = html;
+    
+            stats.textContent = `Total: ${importData.length} baris data`;
+            previewDiv.classList.remove('hidden');
+        }
+
+        async function processImport() {
+            const progressDiv = document.getElementById('import-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const resultsDiv = document.getElementById('import-results');
+            const resultsContent = document.getElementById('results-content');
+    
+            progressDiv.classList.remove('hidden');
+    
+            let success = 0;
+            let failed = 0;
+            let duplicates = 0;
+            let errors = [];
+    
+            for (let i = 0; i < importData.length; i++) {
+                const row = importData[i];
+                const progress = Math.round(((i + 1) / importData.length) * 100);
+        
+                progressBar.style.width = progress + '%';
+                progressText.textContent = progress + '%';
+        
+                try {
+                    if (importType === 'books') {
+                    // Cek duplikat kode_aksesi
+                        if (row.kode_aksesi) {
+                            const existing = await dbManager.db.books.where('kode_aksesi').equals(String(row.kode_aksesi)).first();
+                            if (existing) {
+                                duplicates++;
+                                continue;
+                            }
+                        }
+                
+                    // Generate kode jika kosong
+                    const kode = row.kode_aksesi || dbManager.generateBookCode(row.kategori_ddc);
+                
+                    const bookData = {
+                        kode_aksesi: String(kode),
+                        judul: String(row.judul || ''),
+                        pengarang: String(row.pengarang || ''),
+                        penerbit: String(row.penerbit || ''),
+                        tahun_terbit: parseInt(row.tahun_terbit) || new Date().getFullYear(),
+                        kategori_ddc: String(row.kategori_ddc || '000'),
+                        lokasi_rak: String(row.lokasi_rak || ''),
+                        isbn: row.isbn ? String(row.isbn) : null,
+                        status: 'tersedia'
+                    };
+                
+                    const result = await dbManager.addBook(bookData);
+                        if (result.success) success++;
+                        else {
+                            failed++;
+                            errors.push(`Baris ${i + 1}: ${result.error}`);
+                        }
+                
+                    } else {
+                        // Import anggota
+                        // Cek duplikat NIS
+                        const existing = await dbManager.db.members.where('nis').equals(String(row.nis)).first();
+                        if (existing) {
+                            duplicates++;
+                            continue;
+                        }
+                
+                        const memberData = {
+                            nis: String(row.nis || ''),
+                            nama_lengkap: String(row.nama_lengkap || ''),
+                            kelas: String(row.kelas || ''),
+                            no_hp: row.no_hp ? String(row.no_hp) : null,
+                            email_ortu: row.email_ortu ? String(row.email_ortu) : null,
+                            tipe_anggota: 'siswa',
+                            status: 'aktif'
+                        };
+                
+                        const result = await dbManager.addMember(memberData);
+                        if (result.success) success++;
+                        else {
+                            failed++;
+                            errors.push(`Baris ${i + 1}: ${result.error}`);
+                        }
+                    }
+            
+                    // Delay kecil untuk UI responsive
+                    if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
+            
+                } catch (error) {
+                    failed++;
+                    errors.push(`Baris ${i + 1}: ${error.message}`);
+                }
+            }
+    
+            // Tampilkan hasil
+            resultsDiv.classList.remove('hidden');
+            resultsContent.innerHTML = `
+                <div class="flex gap-4 text-center">
+                    <div class="flex-1 bg-green-100 rounded-lg p-3">
+                        <div class="text-2xl font-bold text-green-700">${success}</div>
+                        <div class="text-sm text-green-600">Berhasil</div>
+                    </div>
+                    <div class="flex-1 bg-yellow-100 rounded-lg p-3">
+                        <div class="text-2xl font-bold text-yellow-700">${duplicates}</div>
+                        <div class="text-sm text-yellow-600">Duplikat</div>
+                    </div>
+                    <div class="flex-1 bg-red-100 rounded-lg p-3">
+                        <div class="text-2xl font-bold text-red-700">${failed}</div>
+                        <div class="text-sm text-red-600">Gagal</div>
+                    </div>
+                </div>
+            ${errors.length > 0 ? `
+                <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 max-h-32 overflow-y-auto">
+                    <p class="font-semibold text-red-700 text-sm mb-2">Error:</p>
+                    <ul class="text-xs text-red-600 space-y-1">
+                        ${errors.slice(0, 5).map(e => `<li>• ${e}</li>`).join('')}
+                        ${errors.length > 5 ? `<li>... dan ${errors.length - 5} error lainnya</li>` : ''}
+                    </ul>
+                </div>
+            ` : ''}
+                <div class="mt-4 text-center">
+                    <button onclick="finishImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                        Selesai
+                    </button>
+                </div>
+            `;
+    
+            // Refresh data
+            if (success > 0) {
+                if (importType === 'books') {
+                    await loadBooks();
+                } else {
+                    await loadMembers();
+                }
+                await loadDashboardStats();
+            }
+        }
+
+        function finishImport() {
+            closeModal('import');
+            // Reset
+            importData = [];
+            importType = '';
+        }
+        
     </script>
 
 </body>
