@@ -154,7 +154,9 @@ class DriveManager {
                     }
                 };
                 
-                this.tokenClient.requestAccessToken();
+                // prompt:'consent' memaksa Google tampilkan layar izin ulang
+                // agar scope userinfo.email & profile benar-benar diberikan
+                this.tokenClient.requestAccessToken({ prompt: 'consent' });
             } catch (error) {
                 reject(error);
             }
