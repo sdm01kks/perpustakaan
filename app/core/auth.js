@@ -200,18 +200,18 @@ class AuthManager {
     // Ambil info user dari Google (menggunakan endpoint v3 via fetch)
     async getGoogleUserInfo() {
         try {
-            const token = gapi.client.getToken();
-            if (!token || !token.access_token) {
-                throw new Error('Tidak ada access token');
+            // Pakai accessToken dari driveConnection (lebih andal dari gapi.client.getToken)
+            const accessToken = driveConnection.accessToken;
+            if (!accessToken) {
+                throw new Error('Access token belum tersedia');
             }
             const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { 'Authorization': 'Bearer ' + token.access_token }
+                headers: { 'Authorization': 'Bearer ' + accessToken }
             });
             if (!response.ok) {
                 throw new Error('HTTP ' + response.status);
             }
             const data = await response.json();
-            // v3 mengembalikan 'name' dan 'email' — samakan dengan yang dipakai kode lama
             return { email: data.email, name: data.name };
         } catch (error) {
             console.error('Gagal ambil info Google:', error);
