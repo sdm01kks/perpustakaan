@@ -5,205 +5,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Perpustakaan SDM01 Kukusan</title>
-
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Dexie.js untuk Database -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-
-    <!-- QRCode.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
     <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-        }
-
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
-
-        .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        body { font-family: 'Nunito', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass-effect { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
+        .loading-spinner { border:3px solid #f3f3f3; border-top:3px solid #667eea; border-radius:50%; width:24px; height:24px; animation:spin 1s linear infinite; }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+        .fade-in { animation:fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
     </style>
 </head>
 
 <body class="gradient-bg min-h-screen flex items-center justify-center p-4">
-
-    <!-- Container Utama -->
     <div class="glass-effect rounded-2xl shadow-2xl w-full max-w-md p-8 fade-in">
 
-        <!-- Logo dan Header -->
         <div class="text-center mb-8">
             <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <span class="text-4xl">📚</span>
             </div>
             <h1 class="text-2xl font-bold text-gray-800">Perpustakaan Digital</h1>
             <p class="text-gray-600">SD Muhammadiyah 01 Kukusan</p>
-            <div class="mt-2 inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                🟢 Sistem Aktif
-            </div>
+            <div class="mt-2 inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">🟢 Sistem Aktif</div>
         </div>
 
-        <!-- Tab Login -->
         <div class="flex mb-6 bg-gray-100 rounded-lg p-1">
-            <button onclick="switchTab('pin')" id="tab-pin" class="flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all bg-white text-gray-800 shadow-sm">
-                🔐 Login PIN
-            </button>
-            <button onclick="switchTab('google')" id="tab-google" class="flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all text-gray-600 hover:text-gray-800">
-                🔑 Login Google
-            </button>
+            <button onclick="switchTab('pin')" id="tab-pin" class="flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all bg-white text-gray-800 shadow-sm">🔐 Login PIN</button>
+            <button onclick="switchTab('google')" id="tab-google" class="flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all text-gray-600 hover:text-gray-800">🔑 Login Google</button>
         </div>
 
-        <!-- Form Login PIN -->
         <div id="form-pin" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Email atau NIS</label>
-                <input type="text" id="login-email" placeholder="contoh: arif.azwar79@gmail.com atau 2024001" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+                <input type="text" id="login-email" placeholder="contoh: arif.fairel@gmail.com atau 2024001"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
             </div>
-
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">PIN (6 digit)</label>
-                <input type="password" id="login-pin" placeholder="******" maxlength="6" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-center tracking-widest">
+                <input type="password" id="login-pin" placeholder="******" maxlength="6"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-center tracking-widest">
             </div>
-
-            <button onclick="loginWithPin()" id="btn-login-pin" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all">
+            <button onclick="loginWithPin()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all">
                 Masuk ke Sistem
             </button>
         </div>
 
-        <!-- Form Login Google (Hidden by default) -->
         <div id="form-google" class="space-y-4 hidden">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p class="text-sm text-blue-800">
-                    <strong>Khusus Admin:</strong> Login dengan akun Google yang terdaftar sebagai admin atau superadmin.
+                    <strong>Khusus Admin:</strong> Login dengan akun <strong>arif.fairel@gmail.com</strong>.
+                    Login ini juga akan menyimpan data ke Google Drive agar perangkat lain bisa mengaksesnya.
                 </p>
             </div>
-
-            <button onclick="loginWithGoogle()" id="btn-login-google" class="w-full bg-white border-2 border-gray-300 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all flex items-center justify-center gap-2">
+            <button onclick="loginWithGoogle()"
+                class="w-full bg-white border-2 border-gray-300 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all flex items-center justify-center gap-2">
                 <svg class="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 Login dengan Google
             </button>
         </div>
 
-        <!-- Status Loading -->
         <div id="loading-status" class="hidden mt-4 text-center">
             <div class="loading-spinner mx-auto mb-2"></div>
             <p class="text-sm text-gray-600" id="loading-text">Memuat sistem...</p>
         </div>
 
-        <!-- Error Message -->
-        <div id="error-message" class="hidden mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm">
-        </div>
+        <div id="error-message" class="hidden mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
 
-        <!-- Info Footer -->
         <div class="mt-6 pt-4 border-t border-gray-200 text-center">
-            <p class="text-xs text-gray-500">
-                Belum punya akun? Hubungi pustakawan atau<br>
-                superadmin: <strong>arif.azwar79@gmail.com</strong>
-            </p>
-            <p class="text-xs text-gray-400 mt-2">
-                v1.0.0 • Serverless PWA
-            </p>
+            <p class="text-xs text-gray-500">Belum punya akun? Hubungi superadmin:<br><strong>arif.fairel@gmail.com</strong></p>
+            <p class="text-xs text-gray-400 mt-2">v1.0.1 • Serverless PWA</p>
         </div>
     </div>
 
-    <!-- Load JavaScript Modules -->
     <script src="app/core/db.js"></script>
     <script src="app/core/drive-config.js"></script>
     <script src="app/core/auth.js"></script>
-
-    <!-- Main Application Logic -->
     <script>
-        // Inisialisasi saat halaman load
         let dbReady = false;
-        let authReady = false;
 
-        document.addEventListener('DOMContentLoaded', async function() {
+        // ── INISIALISASI ──────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', async function () {
             showLoading('Menginisialisasi sistem...');
-
             try {
-                // Tunggu Dexie.js load
                 await waitForDexie();
-
-                // Init database
                 const dbInit = await dbManager.init();
-                if (!dbInit) {
-                    throw new Error('Gagal inisialisasi database');
-                }
+                if (!dbInit) throw new Error('Gagal inisialisasi database');
+                dbReady = true;
 
-                // Cek apakah sudah setup (ada superadmin dengan PIN)
                 const superadmin = await dbManager.db.users
-                    .where('role')
-                    .equals('superadmin')
-                    .first();
+                    .where('role').equals('superadmin').first();
 
                 if (!superadmin || !superadmin.pin) {
-                    // Belum setup, redirect ke halaman setup
-                    window.location.href = 'app/setup.html';
+                    // Perangkat baru — coba pulihkan data dari Google Drive
+                    showLoading('Perangkat baru terdeteksi. Menghubungi Google Drive...');
+                    let restored = false;
+                    try {
+                        await driveManager.init();
+                        showLoading('Silakan login Google untuk memulihkan data...');
+                        await driveManager.connect();
+                        showLoading('Mengunduh data dari Google Drive...');
+                        const driveData = await driveManager.loadFromDrive();
+                        if (driveData && driveData.users && driveData.users.length > 0) {
+                            showLoading('Data ditemukan! Memulihkan ke perangkat ini...');
+                            await dbManager.importAllData(driveData);
+                            restored = true;
+                            console.log('✅ Data dipulihkan dari Drive');
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Tidak bisa load dari Drive:', e.message);
+                    }
+                    if (!restored) {
+                        window.location.href = 'app/setup.html';
+                        return;
+                    }
+                    window.location.reload();
                     return;
                 }
 
-                // Init auth
                 const authInit = await authManager.init();
-
                 hideLoading();
-
-                // Jika sudah login, redirect ke dashboard
                 if (authInit) {
                     const user = authManager.getCurrentUser();
-                    if (user) {
-                        redirectToDashboard(user.role);
-                    }
+                    if (user) redirectToDashboard(user.role);
                 }
-
-                console.log('✅ Sistem siap digunakan');
+                console.log('✅ Sistem siap');
 
             } catch (error) {
                 hideLoading();
@@ -212,201 +145,121 @@
             }
         });
 
-        // Tunggu Dexie load
-        function waitForDexie(maxWait = 10000) {
-            return new Promise((resolve, reject) => {
-                const start = Date.now();
-                const check = () => {
-                    if (typeof Dexie !== 'undefined') {
-                        resolve();
-                    } else if (Date.now() - start > maxWait) {
-                        reject(new Error('Timeout menunggu Dexie.js'));
-                    } else {
-                        setTimeout(check, 100);
-                    }
-                };
-                check();
-            });
-        }
-
-        // Switch tab login
-        function switchTab(tab) {
-            const tabPin = document.getElementById('tab-pin');
-            const tabGoogle = document.getElementById('tab-google');
-            const formPin = document.getElementById('form-pin');
-            const formGoogle = document.getElementById('form-google');
-
-            if (tab === 'pin') {
-                tabPin.classList.add('bg-white', 'shadow-sm', 'text-gray-800');
-                tabPin.classList.remove('text-gray-600');
-                tabGoogle.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
-                tabGoogle.classList.add('text-gray-600');
-                formPin.classList.remove('hidden');
-                formGoogle.classList.add('hidden');
-            } else {
-                tabGoogle.classList.add('bg-white', 'shadow-sm', 'text-gray-800');
-                tabGoogle.classList.remove('text-gray-600');
-                tabPin.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
-                tabPin.classList.add('text-gray-600');
-                formGoogle.classList.remove('hidden');
-                formPin.classList.add('hidden');
-            }
-        }
-
-        // Login dengan PIN - Versi Sederhana
+        // ── LOGIN PIN ─────────────────────────────────────────────────────────
         async function loginWithPin() {
             const email = document.getElementById('login-email').value.trim();
-            const pin = document.getElementById('login-pin').value.trim();
-
-            // Validasi sederhana
-            if (!email || !pin) {
-                showError('Email dan PIN harus diisi');
-                return;
-            }
-
-            if (pin.length !== 6) {
-                showError('PIN harus 6 digit');
-                return;
-            }
-
+            const pin   = document.getElementById('login-pin').value.trim();
+            if (!email || !pin)    { showError('Email dan PIN harus diisi'); return; }
+            if (pin.length !== 6)  { showError('PIN harus 6 digit'); return; }
             showLoading('Memverifikasi...');
             hideError();
-
             try {
-                // Tunggu database siap
-                if (!dbManager.isReady) {
-                    await new Promise(r => setTimeout(r, 1000)); // Tunggu 1 detik
-                }
-
-                // Cari user di database
-                const user = await dbManager.db.users
-                    .where('email')
-                    .equals(email)
-                    .first();
-
-                if (!user) {
-                    hideLoading();
-                    showError('Email tidak ditemukan. Pastikan sudah setup atau email benar.');
-                    return;
-                }
-
-                if (!user.is_active) {
-                    hideLoading();
-                    showError('Akun tidak aktif');
-                    return;
-                }
-
-                // Cek PIN
-                if (user.pin !== pin) {
-                    hideLoading();
-                    showError('PIN salah. Coba lagi.');
-                    return;
-                }
-
-                // Update last login
-                await dbManager.db.users.update(user.id, {
-                    last_login: new Date().toISOString()
-                });
-
-                // Simpan session
+                if (!dbManager.isReady) await new Promise(r => setTimeout(r, 1000));
+                const user = await dbManager.db.users.where('email').equals(email).first();
+                if (!user)            { hideLoading(); showError('Email tidak ditemukan.'); return; }
+                if (!user.is_active)  { hideLoading(); showError('Akun tidak aktif.'); return; }
+                if (user.pin !== pin) { hideLoading(); showError('PIN salah. Coba lagi.'); return; }
+                await dbManager.db.users.update(user.id, { last_login: new Date().toISOString() });
                 localStorage.setItem('perpustakaan_session', JSON.stringify(user));
-
-                // Redirect
                 hideLoading();
                 showLoading('Login berhasil! Mengalihkan...');
-
-                setTimeout(() => {
-                    const routes = {
-                        'superadmin': 'app/dashboard/pustakawan.html',
-                        'admin': 'app/dashboard/pustakawan.html',
-                        'pustakawan': 'app/dashboard/pustakawan.html',
-                        'guru': 'app/dashboard/guru.html',
-                        'siswa': 'app/dashboard/siswa.html'
-                    };
-                    window.location.href = routes[user.role] || 'app/dashboard/pustakawan.html';
-                }, 500);
-
+                setTimeout(() => redirectToDashboard(user.role), 500);
             } catch (error) {
                 hideLoading();
-                console.error('Login error:', error);
                 showError('Terjadi kesalahan: ' + error.message);
             }
         }
 
-        // Login dengan Google
+        // ── LOGIN GOOGLE ──────────────────────────────────────────────────────
         async function loginWithGoogle() {
             if (!dbReady) {
-                showError('Sistem masih memuat, tunggu sebentar...');
-                return;
+                showLoading('Menunggu sistem siap...');
+                for (let i = 0; i < 15 && !dbReady; i++) await new Promise(r => setTimeout(r, 200));
+                hideLoading();
+                if (!dbReady) { showError('Sistem masih memuat, coba lagi.'); return; }
             }
-
             showLoading('Menghubungkan ke Google...');
             hideError();
-
             try {
-                // Init drive manager dulu
                 await driveManager.init();
-
                 const result = await authManager.loginWithGoogle();
-
-                hideLoading();
-
-                if (result.success) {
-                    showLoading('Login berhasil! Mengalihkan...');
-                    setTimeout(() => {
-                        redirectToDashboard(result.role);
-                    }, 500);
-                } else {
+                if (!result.success) {
+                    hideLoading();
                     showError(result.error || 'Login Google gagal');
+                    return;
                 }
+
+                // ── KUNCI: simpan semua data ke Drive setelah login berhasil ──
+                // File library-data.json di Drive inilah yang diambil perangkat baru.
+                try {
+                    showLoading('Login berhasil! Menyimpan data ke Google Drive...');
+                    const backup = await dbManager.exportAllData();
+                    await driveManager.saveToDrive(backup);
+                    console.log('✅ Data tersinkron ke Google Drive');
+                } catch (syncError) {
+                    console.warn('⚠️ Sync Drive gagal (tidak fatal):', syncError.message);
+                }
+
+                showLoading('Mengalihkan ke dashboard...');
+                setTimeout(() => redirectToDashboard(result.role), 500);
+
             } catch (error) {
                 hideLoading();
                 showError('Gagal login Google: ' + error.message);
             }
         }
 
-        // Redirect ke dashboard sesuai role
+        // ── UTILITAS ──────────────────────────────────────────────────────────
         function redirectToDashboard(role) {
             const routes = {
-                'superadmin': 'app/dashboard/pustakawan.html',
-                'admin': 'app/dashboard/pustakawan.html',
-                'pustakawan': 'app/dashboard/pustakawan.html',
-                'guru': 'app/dashboard/guru.html',
-                'siswa': 'app/dashboard/siswa.html'
+                superadmin: 'app/dashboard/pustakawan.html',
+                admin:      'app/dashboard/pustakawan.html',
+                pustakawan: 'app/dashboard/pustakawan.html',
+                guru:       'app/dashboard/guru.html',
+                siswa:      'app/dashboard/siswa.html'
             };
-
-            const route = routes[role] || 'app/dashboard/pustakawan.html';
-            window.location.href = route;
+            window.location.href = routes[role] || 'app/dashboard/pustakawan.html';
         }
 
-        // Utility functions
+        function switchTab(tab) {
+            const isPin = tab === 'pin';
+            ['bg-white','shadow-sm','text-gray-800'].forEach(c => {
+                document.getElementById('tab-pin').classList.toggle(c, isPin);
+                document.getElementById('tab-google').classList.toggle(c, !isPin);
+            });
+            document.getElementById('tab-pin').classList.toggle('text-gray-600', !isPin);
+            document.getElementById('tab-google').classList.toggle('text-gray-600', isPin);
+            document.getElementById('form-pin').classList.toggle('hidden', !isPin);
+            document.getElementById('form-google').classList.toggle('hidden', isPin);
+        }
+
+        function waitForDexie(maxWait = 10000) {
+            return new Promise((resolve, reject) => {
+                const start = Date.now();
+                const check = () => {
+                    if (typeof Dexie !== 'undefined') resolve();
+                    else if (Date.now() - start > maxWait) reject(new Error('Timeout Dexie.js'));
+                    else setTimeout(check, 100);
+                };
+                check();
+            });
+        }
+
         function showLoading(text) {
             document.getElementById('loading-status').classList.remove('hidden');
             document.getElementById('loading-text').textContent = text;
         }
-
-        function hideLoading() {
-            document.getElementById('loading-status').classList.add('hidden');
+        function hideLoading()  { document.getElementById('loading-status').classList.add('hidden'); }
+        function showError(msg) {
+            const el = document.getElementById('error-message');
+            el.textContent = msg;
+            el.classList.remove('hidden');
         }
+        function hideError() { document.getElementById('error-message').classList.add('hidden'); }
 
-        function showError(message) {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = message;
-            errorDiv.classList.remove('hidden');
-        }
-
-        function hideError() {
-            document.getElementById('error-message').classList.add('hidden');
-        }
-
-        // Enter key untuk submit
-        document.getElementById('login-pin')?.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                loginWithPin();
-            }
+        document.getElementById('login-pin')?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') loginWithPin();
         });
     </script>
-
 </body>
-
 </html>
