@@ -197,13 +197,22 @@ class AuthManager {
         }
     }
 
-    // Ambil info user dari Google
+    // Ambil info user dari Google (menggunakan endpoint v3 via fetch)
     async getGoogleUserInfo() {
         try {
-            const response = await gapi.client.request({
-                path: 'https://www.googleapis.com/oauth2/v2/userinfo'
+            const token = gapi.client.getToken();
+            if (!token || !token.access_token) {
+                throw new Error('Tidak ada access token');
+            }
+            const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { 'Authorization': 'Bearer ' + token.access_token }
             });
-            return response.result;
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            const data = await response.json();
+            // v3 mengembalikan 'name' dan 'email' — samakan dengan yang dipakai kode lama
+            return { email: data.email, name: data.name };
         } catch (error) {
             console.error('Gagal ambil info Google:', error);
             return { email: 'unknown', name: 'Unknown' };
