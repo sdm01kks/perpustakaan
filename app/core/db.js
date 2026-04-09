@@ -109,7 +109,7 @@ class DatabaseManager {
         if (!hasAdmin) {
             // Setup default superadmin (password akan di-setup di auth.js)
             await this.db.users.add({
-                email: 'arif.fairel@gmail.com',
+                email: 'arif.azwar79@gmail.com',
                 nama: 'Arif Azwar',
                 role: 'superadmin',
                 pin: null, // Akan di-set saat first login
@@ -472,12 +472,21 @@ class DatabaseManager {
             await this.db.books.clear();
             await this.db.members.clear();
             await this.db.circulation.clear();
-            
+            await this.db.users.clear();
+            await this.db.settings.clear();
+
             // Import new data
-            if (backupData.books) await this.db.books.bulkAdd(backupData.books);
-            if (backupData.members) await this.db.members.bulkAdd(backupData.members);
-            if (backupData.circulation) await this.db.circulation.bulkAdd(backupData.circulation);
-            
+            if (backupData.books && backupData.books.length > 0)
+                await this.db.books.bulkAdd(backupData.books);
+            if (backupData.members && backupData.members.length > 0)
+                await this.db.members.bulkAdd(backupData.members);
+            if (backupData.circulation && backupData.circulation.length > 0)
+                await this.db.circulation.bulkAdd(backupData.circulation);
+            if (backupData.users && backupData.users.length > 0)
+                await this.db.users.bulkAdd(backupData.users);
+            if (backupData.settings && backupData.settings.length > 0)
+                await this.db.settings.bulkPut(backupData.settings);
+
             return { success: true, message: 'Data berhasil di-import' };
         } catch (error) {
             return { success: false, error: error.message };
