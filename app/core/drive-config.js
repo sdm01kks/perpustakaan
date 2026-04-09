@@ -1,58 +1,43 @@
 /**
  * Google Drive Configuration
  * SDM01 Perpustakaan - Cloud Sync
- * 
- * ⚠️ PENTING: File ini TIDAK mengandung Client Secret!
- * Client Secret hanya untuk server-side, tidak untuk browser.
+ *
+ * Arsitektur sinkronisasi:
+ * - Superadmin menyimpan data ke Drive → file dijadikan PUBLIK → fileId disimpan
+ * - Perangkat lain membaca file publik dengan API Key saja (tanpa OAuth)
+ * - URL diberi hash #dbid=FILEID agar bisa dibagikan ke semua staf
  */
 
 const DRIVE_CONFIG = {
-    // API Key untuk akses publik (bisa di-commit ke GitHub)
-    API_KEY: 'AIzaSyDtp1wSGBVqEuhyxXTYOLzJeYKk6zZZE7Y',
-    
-    // Client ID untuk OAuth (bisa di-commit ke GitHub)
-    CLIENT_ID: '651081925275-ca4lhpcrh71nvpe0jltgqbr9tisaal1j.apps.googleusercontent.com',
-    
-    // Scopes yang diperlukan
-    SCOPES: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-    
-    // Nama folder di Google Drive
+    API_KEY:     'AIzaSyDtp1wSGBVqEuhyxXTYOLzJeYKk6zZZE7Y',
+    CLIENT_ID:   '651081925275-ca4lhpcrh71nvpe0jltgqbr9tisaal1j.apps.googleusercontent.com',
+    SCOPES:      'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
     FOLDER_NAME: 'SDM01-Perpustakaan',
-    
-    // ID folder (akan diisi otomatis setelah setup)
-    FOLDER_ID: null,
-    
-    // File database di Drive
-    DB_FILE_NAME: 'library-data.json',
-    DB_FILE_ID: null,
-    
-    // Versi aplikasi
-    APP_VERSION: '1.0.0'
+    DB_FILE_NAME:'library-data.json',
+    FOLDER_ID:   null,
+    APP_VERSION: '1.0.1'
 };
 
-// Status koneksi
+// Key localStorage untuk menyimpan file ID
+const DRIVE_FILE_ID_KEY = 'sdm01_drive_file_id';
+
 let driveConnection = {
-    isConnected: false,
+    isConnected:   false,
     isInitialized: false,
-    accessToken: null,
-    user: null
+    accessToken:   null,
+    user:          null
 };
 
-// Class untuk mengelola Google Drive
 class DriveManager {
     constructor() {
-        this.config = DRIVE_CONFIG;
-        this.gapi = null;
+        this.config    = DRIVE_CONFIG;
         this.tokenClient = null;
     }
 
-    // Inisialisasi Google API
+    // ── Inisialisasi Google API ────────────────────────────────────────────
     async init() {
         try {
-            // Load Google API Client
             await this.loadGapi();
-            
-            // Initialize client
             await new Promise((resolve, reject) => {
                 gapi.load('client', async () => {
                     try {
@@ -61,286 +46,239 @@ class DriveManager {
                             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
                         });
                         resolve();
-                    } catch (error) {
-                        reject(error);
-                    }
+                    } catch (e) { reject(e); }
                 });
             });
-
             driveConnection.isInitialized = true;
             console.log('✅ Google Drive API initialized');
             return true;
-        } catch (error) {
-            console.error('❌ Gagal init Google Drive:', error);
+        } catch (e) {
+            console.error('❌ Gagal init Google Drive:', e);
             return false;
         }
     }
 
-    // Load script Google API
     loadGapi() {
         return new Promise((resolve, reject) => {
-            if (window.gapi) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = 'https://apis.google.com/js/api.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
+            if (window.gapi) { resolve(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://apis.google.com/js/api.js';
+            s.onload = resolve; s.onerror = reject;
+            document.head.appendChild(s);
         });
     }
 
-    // Load OAuth script
     loadGis() {
         return new Promise((resolve, reject) => {
-            if (window.google && window.google.accounts) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
+            if (window.google && window.google.accounts) { resolve(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://accounts.google.com/gsi/client';
+            s.onload = resolve; s.onerror = reject;
+            document.head.appendChild(s);
         });
     }
 
-    // Setup OAuth client
     async setupOAuth() {
         await this.loadGis();
-        
         this.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: this.config.CLIENT_ID,
-            scope: this.config.SCOPES,
-            callback: (tokenResponse) => {
-                if (tokenResponse && tokenResponse.access_token) {
-                    driveConnection.accessToken = tokenResponse.access_token;
-                    driveConnection.isConnected = true;
-                    gapi.client.setToken({ access_token: tokenResponse.access_token });
-                    console.log('✅ Berhasil login Google Drive');
-                    
-                    // Trigger event
-                    window.dispatchEvent(new CustomEvent('drive-connected', {
-                        detail: { user: driveConnection.user }
-                    }));
-                }
-            }
+            scope:     this.config.SCOPES,
+            callback:  () => {}
         });
     }
 
-    // Login / Request Access
     async connect() {
-        if (!driveConnection.isInitialized) {
-            await this.init();
-        }
-        
-        if (!this.tokenClient) {
-            await this.setupOAuth();
-        }
+        if (!driveConnection.isInitialized) await this.init();
+        if (!this.tokenClient)              await this.setupOAuth();
 
         return new Promise((resolve, reject) => {
-            try {
-                this.tokenClient.callback = (tokenResponse) => {
-                    if (tokenResponse.error) {
-                        reject(tokenResponse.error);
-                    } else {
-                        driveConnection.accessToken = tokenResponse.access_token;
-                        driveConnection.isConnected = true;
-                        gapi.client.setToken({ access_token: tokenResponse.access_token });
-                        resolve(tokenResponse);
-                    }
-                };
-                
-                // prompt:'consent' memaksa Google tampilkan layar izin ulang
-                // agar scope userinfo.email & profile benar-benar diberikan
-                this.tokenClient.requestAccessToken({ prompt: 'consent' });
-            } catch (error) {
-                reject(error);
-            }
+            this.tokenClient.callback = (resp) => {
+                if (resp.error) { reject(resp.error); return; }
+                driveConnection.accessToken = resp.access_token;
+                driveConnection.isConnected = true;
+                gapi.client.setToken({ access_token: resp.access_token });
+                resolve(resp);
+            };
+            // prompt:'consent' agar scope baru benar-benar diberikan
+            this.tokenClient.requestAccessToken({ prompt: 'consent' });
         });
     }
 
-    // Disconnect
     disconnect() {
-        if (driveConnection.accessToken) {
-            google.accounts.oauth2.revoke(driveConnection.access_token, () => {
-                console.log('✅ Disconnected from Google Drive');
-            });
-        }
-        driveConnection.isConnected = false;
-        driveConnection.accessToken = null;
+        if (driveConnection.accessToken)
+            google.accounts.oauth2.revoke(driveConnection.accessToken, () => {});
+        driveConnection.isConnected  = false;
+        driveConnection.accessToken  = null;
         gapi.client.setToken(null);
     }
 
-    // Cek atau buat folder di Drive
+    // ── Folder ────────────────────────────────────────────────────────────
     async ensureFolder() {
-        if (!driveConnection.isConnected) {
+        if (!driveConnection.isConnected)
             throw new Error('Belum terkoneksi ke Google Drive');
-        }
 
-        try {
-            // Cek apakah folder sudah ada
-            const response = await gapi.client.drive.files.list({
-                q: `name='${this.config.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-                spaces: 'drive'
+        const res = await gapi.client.drive.files.list({
+            q: `name='${this.config.FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            spaces: 'drive', fields: 'files(id)'
+        });
+
+        if (res.result.files && res.result.files.length > 0) {
+            this.config.FOLDER_ID = res.result.files[0].id;
+        } else {
+            const folder = await gapi.client.drive.files.create({
+                resource: { name: this.config.FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
+                fields: 'id'
             });
-
-            if (response.result.files && response.result.files.length > 0) {
-                this.config.FOLDER_ID = response.result.files[0].id;
-                console.log('✅ Folder ditemukan:', this.config.FOLDER_ID);
-            } else {
-                // Buat folder baru
-                const folder = await gapi.client.drive.files.create({
-                    resource: {
-                        name: this.config.FOLDER_NAME,
-                        mimeType: 'application/vnd.google-apps.folder'
-                    },
-                    fields: 'id'
-                });
-                this.config.FOLDER_ID = folder.result.id;
-                console.log('✅ Folder baru dibuat:', this.config.FOLDER_ID);
-            }
-
-            return this.config.FOLDER_ID;
-        } catch (error) {
-            console.error('❌ Gagal setup folder:', error);
-            throw error;
+            this.config.FOLDER_ID = folder.result.id;
         }
+        return this.config.FOLDER_ID;
     }
 
-    // Simpan data ke Drive
+    // ── Simpan ke Drive + jadikan publik + simpan fileId ──────────────────
     async saveToDrive(data) {
         await this.ensureFolder();
 
         const fileContent = JSON.stringify(data, null, 2);
-        const blob = new Blob([fileContent], { type: 'application/json' });
+        const accessToken = driveConnection.accessToken;
 
         // Cek apakah file sudah ada
-        const existingFile = await this.findFile(this.config.DB_FILE_NAME);
-        
-        if (existingFile) {
-            // Update file existing
-            await gapi.client.drive.files.update({
-                fileId: existingFile.id,
-                media: {
-                    mimeType: 'application/json',
+        const existing = await this.findFile(this.config.DB_FILE_NAME);
+        let fileId;
+
+        if (existing) {
+            // Update isi file yang sudah ada
+            const res = await fetch(
+                `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media&fields=id`,
+                {
+                    method:  'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type':  'application/json'
+                    },
                     body: fileContent
                 }
-            });
+            );
+            if (!res.ok) throw new Error('Update Drive gagal: ' + res.status);
+            const json = await res.json();
+            fileId = json.id || existing.id;
             console.log('✅ Data di-update di Drive');
         } else {
-            // Buat file baru
-            const metadata = {
-                name: this.config.DB_FILE_NAME,
+            // Buat file baru dengan multipart upload
+            const metadata = JSON.stringify({
+                name:    this.config.DB_FILE_NAME,
                 parents: [this.config.FOLDER_ID],
                 mimeType: 'application/json'
-            };
-
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', blob);
-
-            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${driveConnection.access_token}`
-                },
-                body: form
             });
+            const boundary = 'boundary_sdm01';
+            const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${fileContent}\r\n--${boundary}--`;
 
-            if (!response.ok) throw new Error('Upload failed');
-            console.log('✅ Data baru di-upload ke Drive');
+            const res = await fetch(
+                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+                {
+                    method:  'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken,
+                        'Content-Type':  `multipart/related; boundary=${boundary}`
+                    },
+                    body
+                }
+            );
+            if (!res.ok) throw new Error('Upload Drive gagal: ' + res.status);
+            const json = await res.json();
+            fileId = json.id;
+            console.log('✅ File baru dibuat di Drive:', fileId);
         }
 
-        // Update timestamp terakhir sync
+        // Jadikan file publik (siapa pun bisa baca tanpa login)
+        await this.makeFilePublic(fileId, accessToken);
+
+        // Simpan fileId ke localStorage dan URL hash
+        this.storeFileId(fileId);
+
         localStorage.setItem('lastDriveSync', new Date().toISOString());
+        return fileId;
     }
 
-    // Ambil data dari Drive
+    // Beri permission 'anyone can read' pada file
+    async makeFilePublic(fileId, accessToken) {
+        try {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+                method:  'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken,
+                    'Content-Type':  'application/json'
+                },
+                body: JSON.stringify({ role: 'reader', type: 'anyone' })
+            });
+            console.log('✅ File dijadikan publik:', fileId);
+        } catch (e) {
+            console.warn('⚠️ Gagal jadikan publik (tidak fatal):', e.message);
+        }
+    }
+
+    // Simpan fileId ke localStorage & URL hash agar bisa dibagikan
+    storeFileId(fileId) {
+        localStorage.setItem(DRIVE_FILE_ID_KEY, fileId);
+        // Update URL hash tanpa reload halaman
+        if (window.location.hash !== '#dbid=' + fileId) {
+            history.replaceState(null, '', window.location.pathname + '#dbid=' + fileId);
+        }
+        console.log('✅ File ID disimpan:', fileId);
+    }
+
+    // ── Ambil data TANPA OAuth (baca file publik pakai API Key) ───────────
+    // Ini yang dipakai perangkat baru — tidak perlu popup Google sama sekali
+    async fetchPublicData(fileId) {
+        const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${this.config.API_KEY}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Gagal ambil data publik: HTTP ' + res.status);
+        return await res.json();
+    }
+
+    // Ambil fileId yang tersimpan (dari URL hash atau localStorage)
+    getSavedFileId() {
+        // Prioritas: URL hash
+        const hash = window.location.hash;
+        if (hash.startsWith('#dbid=')) {
+            const id = hash.slice(6);
+            if (id) {
+                localStorage.setItem(DRIVE_FILE_ID_KEY, id); // simpan juga ke localStorage
+                return id;
+            }
+        }
+        // Fallback: localStorage
+        return localStorage.getItem(DRIVE_FILE_ID_KEY);
+    }
+
+    // ── Ambil data dari Drive (pakai OAuth — untuk superadmin) ────────────
     async loadFromDrive() {
         await this.ensureFolder();
-
         const file = await this.findFile(this.config.DB_FILE_NAME);
-        if (!file) {
-            console.log('ℹ️ Belum ada data di Drive');
-            return null;
-        }
-
-        const response = await gapi.client.drive.files.get({
-            fileId: file.id,
-            alt: 'media'
-        });
-
-        return response.result;
+        if (!file) return null;
+        const res = await gapi.client.drive.files.get({ fileId: file.id, alt: 'media' });
+        return res.result;
     }
 
-    // Cari file di folder
     async findFile(fileName) {
-        const response = await gapi.client.drive.files.list({
+        const res = await gapi.client.drive.files.list({
             q: `name='${fileName}' and '${this.config.FOLDER_ID}' in parents and trashed=false`,
             spaces: 'drive',
             fields: 'files(id, name, modifiedTime)'
         });
-
-        return response.result.files && response.result.files[0];
+        return res.result.files && res.result.files[0];
     }
 
-    // Export data ke Excel di Drive
-    async exportToExcel(data, fileName) {
-        await this.ensureFolder();
-
-        // Konversi ke CSV sederhana (nanti bisa diganti dengan library Excel)
-        let csv = '';
-        if (data.length > 0) {
-            const headers = Object.keys(data[0]);
-            csv = headers.join(',') + '\n';
-            data.forEach(row => {
-                csv += headers.map(h => {
-                    const val = row[h] || '';
-                    return `"${String(val).replace(/"/g, '""')}"`;
-                }).join(',') + '\n';
-            });
-        }
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const metadata = {
-            name: fileName,
-            parents: [this.config.FOLDER_ID],
-            mimeType: 'text/csv'
-        };
-
-        const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', blob);
-
-        await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${driveConnection.access_token}`
-            },
-            body: form
-        });
-
-        console.log('✅ Excel di-export ke Drive:', fileName);
-    }
-
-    // Get status koneksi
     getStatus() {
         return {
             ...driveConnection,
-            folderId: this.config.FOLDER_ID,
-            lastSync: localStorage.getItem('lastDriveSync')
+            folderId:  this.config.FOLDER_ID,
+            fileId:    this.getSavedFileId(),
+            lastSync:  localStorage.getItem('lastDriveSync')
         };
     }
 }
 
-// Instance global
 const driveManager = new DriveManager();
 
-// Export
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== 'undefined' && module.exports)
     module.exports = { DRIVE_CONFIG, DriveManager, driveManager, driveConnection };
-}
