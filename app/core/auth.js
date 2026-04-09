@@ -158,7 +158,7 @@ class AuthManager {
 
             if (!user) {
                 // Auto-register untuk superadmin pertama kali
-                if (googleUser.email === 'arif.fairel@gmail.com') {
+                if (googleUser.email === 'arif.azwar79@gmail.com') {
                     const id = await dbManager.db.users.add({
                         email: googleUser.email,
                         nama: googleUser.name || 'Superadmin',
