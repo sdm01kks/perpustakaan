@@ -37,6 +37,22 @@
             <button onclick="switchTab('google')" id="tab-google" class="flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all text-gray-600 hover:text-gray-800">🔑 Login Google</button>
         </div>
 
+        <!-- Panel Perangkat Baru (tampil jika DB kosong) -->
+        <div id="new-device-panel" class="hidden space-y-4">
+            <div class="bg-amber-50 border border-amber-300 rounded-lg p-4">
+                <p class="text-sm text-amber-800 font-semibold mb-1">⚠️ Perangkat Baru Terdeteksi</p>
+                <p class="text-sm text-amber-700">Data belum tersedia di perangkat ini. Pulihkan dari Google Drive menggunakan akun <strong>arif.azwar79@gmail.com</strong>, atau setup instalasi baru.</p>
+            </div>
+            <button onclick="restoreFromDrive()"
+                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                🔄 Pulihkan Data dari Google Drive
+            </button>
+            <button onclick="window.location.href='app/setup.html'"
+                class="w-full bg-gray-100 text-gray-600 font-semibold py-2 rounded-lg hover:bg-gray-200 transition-all text-sm">
+                ➕ Setup sebagai instalasi baru
+            </button>
+        </div>
+
         <div id="form-pin" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Email atau NIS</label>
@@ -104,29 +120,10 @@
                     .where('role').equals('superadmin').first();
 
                 if (!superadmin || !superadmin.pin) {
-                    // Perangkat baru — coba pulihkan data dari Google Drive
-                    showLoading('Perangkat baru terdeteksi. Menghubungi Google Drive...');
-                    let restored = false;
-                    try {
-                        await driveManager.init();
-                        showLoading('Silakan login Google untuk memulihkan data...');
-                        await driveManager.connect();
-                        showLoading('Mengunduh data dari Google Drive...');
-                        const driveData = await driveManager.loadFromDrive();
-                        if (driveData && driveData.users && driveData.users.length > 0) {
-                            showLoading('Data ditemukan! Memulihkan ke perangkat ini...');
-                            await dbManager.importAllData(driveData);
-                            restored = true;
-                            console.log('✅ Data dipulihkan dari Drive');
-                        }
-                    } catch (e) {
-                        console.warn('⚠️ Tidak bisa load dari Drive:', e.message);
-                    }
-                    if (!restored) {
-                        window.location.href = 'app/setup.html';
-                        return;
-                    }
-                    window.location.reload();
+                    // Perangkat baru — tampilkan tombol, JANGAN auto-popup
+                    // (browser memblokir popup yang tidak dipicu langsung oleh klik)
+                    hideLoading();
+                    showNewDeviceUI();
                     return;
                 }
 
@@ -144,6 +141,39 @@
                 console.error(error);
             }
         });
+
+        // Tampilkan UI khusus perangkat baru
+        function showNewDeviceUI() {
+            document.querySelector('.flex.mb-6.bg-gray-100').classList.add('hidden');
+            document.getElementById('form-pin').classList.add('hidden');
+            document.getElementById('form-google').classList.add('hidden');
+            document.getElementById('new-device-panel').classList.remove('hidden');
+        }
+
+        // Dipanggil saat user klik tombol — popup boleh dibuka karena ada interaksi langsung
+        async function restoreFromDrive() {
+            showLoading('Menghubungi Google Drive...');
+            hideError();
+            try {
+                await driveManager.init();
+                showLoading('Silakan pilih akun Google superadmin...');
+                await driveManager.connect();
+                showLoading('Mengunduh data dari Google Drive...');
+                const driveData = await driveManager.loadFromDrive();
+                if (driveData && driveData.users && driveData.users.length > 0) {
+                    showLoading('Data ditemukan! Memulihkan...');
+                    await dbManager.importAllData(driveData);
+                    showLoading('Berhasil! Memuat ulang...');
+                    setTimeout(() => window.location.reload(), 800);
+                } else {
+                    hideLoading();
+                    showError('Tidak ada data di Google Drive. Gunakan "Setup instalasi baru".');
+                }
+            } catch (e) {
+                hideLoading();
+                showError('Gagal terhubung ke Drive: ' + e.message);
+            }
+        }
 
         // ── LOGIN PIN ─────────────────────────────────────────────────────────
         async function loginWithPin() {
