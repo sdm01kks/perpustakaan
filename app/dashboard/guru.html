@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Guru - SDM01 Kukusan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    <style>
+        body { font-family:'Nunito',sans-serif; }
+        .gradient-bg { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<header class="gradient-bg text-white shadow-lg">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">📚</div>
+            <div>
+                <h1 class="font-bold text-lg">Perpustakaan SDM01</h1>
+                <p class="text-xs text-blue-200">Dashboard Guru</p>
+            </div>
+        </div>
+        <button onclick="doLogout()"
+            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            Logout
+        </button>
+    </div>
+</header>
+
+<main class="container mx-auto px-4 py-6 max-w-2xl">
+
+    <!-- Selamat datang -->
+    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-3xl">👋</div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-800" id="welcome-name">Halo, Guru!</h2>
+                <p class="text-sm text-gray-500" id="welcome-email"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buku yang sedang dipinjam -->
+    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <span>📖</span> Buku Saya yang Dipinjam
+        </h3>
+        <div id="my-books">
+            <div class="text-center py-8 text-gray-500">
+                <div class="text-4xl mb-2">📚</div>
+                <p>Memuat data...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cari Buku -->
+    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <span>🔍</span> Cari Buku Koleksi
+        </h3>
+        <div class="flex gap-2 mb-4">
+            <input type="text" id="search-input" placeholder="Ketik judul atau pengarang..."
+                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                onkeypress="if(event.key==='Enter') searchBooks()">
+            <button onclick="searchBooks()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">Cari</button>
+        </div>
+        <div id="search-results" class="space-y-3 max-h-72 overflow-y-auto">
+            <p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari</p>
+        </div>
+    </div>
+
+    <!-- Info peminjaman -->
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <h4 class="font-semibold text-blue-800 mb-2">📋 Ketentuan Peminjaman Guru</h4>
+        <ul class="text-sm text-blue-700 space-y-1">
+            <li>• Maksimal pinjam: 5 buku</li>
+            <li>• Durasi: 14 hari</li>
+            <li>• Denda keterlambatan: Rp 1.000/hari (maks Rp 10.000)</li>
+            <li>• Pengembalian di meja pustakawan</li>
+        </ul>
+    </div>
+
+</main>
+
+<script src="../../app/core/db.js"></script>
+<script src="../../app/core/drive-config.js"></script>
+<script src="../../app/core/auth.js"></script>
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await waitForLibraries();
+    await dbManager.init();
+
+    // Refresh data dari Drive di background
+    const fileId = driveManager.getFileId();
+    if (fileId) {
+        driveManager.fetchPublicData(fileId)
+            .then(d => d && d.users && dbManager.importAllData(d))
+            .catch(() => {});
+    }
+
+    const ok = await authManager.init();
+    if (!ok) { redirectToLogin(); return; }
+
+    currentUser = authManager.getCurrentUser();
+    if (!currentUser || (currentUser.role !== 'guru' && currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+        redirectToLogin(); return;
+    }
+
+    document.getElementById('welcome-name').textContent = 'Halo, ' + (currentUser.nama || 'Guru') + '!';
+    document.getElementById('welcome-email').textContent = currentUser.email;
+
+    await loadMyBooks();
+});
+
+async function loadMyBooks() {
+    const el = document.getElementById('my-books');
+    try {
+        const loans = await dbManager.db.circulation
+            .where('member_id').equals(currentUser.id)
+            .and(c => c.status === 'dipinjam').toArray();
+
+        if (loans.length === 0) {
+            el.innerHTML = `<div class="text-center py-8 text-gray-500">
+                <div class="text-4xl mb-2">📚</div>
+                <p>Tidak ada buku yang sedang dipinjam</p></div>`;
+            return;
+        }
+
+        const items = await Promise.all(loans.map(async l => {
+            const book = await dbManager.db.books.get(l.book_id);
+            return { ...l, book };
+        }));
+
+        el.innerHTML = items.filter(i => i.book).map(i => {
+            const due = new Date(i.due_date);
+            const diff = Math.ceil((due - new Date()) / 86400000);
+            const cls  = diff < 0 ? 'bg-red-50 border-red-200' : diff <= 2 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50';
+            const badge = diff < 0
+                ? `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">⚠️ Terlambat ${Math.abs(diff)}h</span>`
+                : `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">✅ ${diff} hari lagi</span>`;
+            return `<div class="border rounded-lg p-4 ${cls}">
+                <div class="flex justify-between items-start mb-1">
+                    <div><h4 class="font-semibold text-gray-800">${i.book.judul}</h4>
+                    <p class="text-sm text-gray-600">${i.book.pengarang}</p></div>
+                    ${badge}
+                </div>
+                <p class="text-xs text-gray-500">Jatuh tempo: ${due.toLocaleDateString('id-ID')}</p>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        el.innerHTML = '<p class="text-center text-red-500 py-4">Gagal memuat data</p>';
+    }
+}
+
+async function searchBooks() {
+    const q  = document.getElementById('search-input').value.trim();
+    const el = document.getElementById('search-results');
+    if (!q) { el.innerHTML = '<p class="text-center text-gray-500 py-4">Masukkan kata kunci</p>'; return; }
+    el.innerHTML = '<p class="text-center py-4">Mencari...</p>';
+    try {
+        const { data } = await dbManager.getAllBooks({ search: q, status: 'tersedia' });
+        if (!data || data.length === 0) {
+            el.innerHTML = '<p class="text-center py-4 text-gray-500">Tidak ada buku tersedia</p>'; return;
+        }
+        el.innerHTML = data.slice(0, 8).map(b => `
+            <div class="border rounded-lg p-3 hover:bg-gray-50">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 text-sm">${b.judul}</h4>
+                        <p class="text-xs text-gray-600">${b.pengarang}</p>
+                        <span class="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">${b.kategori_ddc || '-'}</span>
+                    </div>
+                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Tersedia</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Rak: ${b.lokasi_rak || '-'}</p>
+            </div>`).join('');
+    } catch (e) {
+        el.innerHTML = '<p class="text-center py-4 text-red-500">Gagal mencari</p>';
+    }
+}
+
+function doLogout() {
+    localStorage.removeItem('perpustakaan_session');
+    if (window.gapi && window.gapi.client) window.gapi.client.setToken(null);
+    window.location.replace('../../index.html');
+}
+
+function redirectToLogin() { window.location.replace('../../index.html'); }
+
+function waitForLibraries() {
+    return new Promise(res => {
+        const c = () => (typeof Dexie!=='undefined' && typeof dbManager!=='undefined') ? res() : setTimeout(c,100);
+        c();
+    });
+}
+</script>
+</body>
+</html>
