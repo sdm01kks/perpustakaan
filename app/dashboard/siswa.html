@@ -115,6 +115,14 @@
             const dbInit = await dbManager.init();
             if (!dbInit) throw new Error('Database failed to initialize');
 
+            // Refresh data user dari Sheets di background
+            sheetsManager.fetchUsers().then(async users => {
+                if (users.length > 0) {
+                    await dbManager.db.users.clear();
+                    await dbManager.db.users.bulkAdd(users);
+                }
+            }).catch(() => {});
+
             // Cek autentikasi
             const isLoggedIn = await authManager.init();
             if (!isLoggedIn) {
