@@ -260,12 +260,18 @@
         <!-- ═══ SECTION: KELOLA USER ══════════════════════════════════════════ -->
         <section id="section-users" class="hidden space-y-6">
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center flex-wrap gap-2">
                     <h3 class="font-bold text-lg">👤 Daftar User Login</h3>
-                    <button onclick="document.getElementById('form-add-user').classList.toggle('hidden')"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1">
-                        <span>➕</span><span>Tambah User</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="btn-sync-drive" onclick="syncUsersToDrive()"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1">
+                            <span>☁️</span><span>Sync ke Drive</span>
+                        </button>
+                        <button onclick="document.getElementById('form-add-user').classList.toggle('hidden')"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1">
+                            <span>➕</span><span>Tambah User</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
@@ -1199,14 +1205,46 @@
         // Simpan semua data (termasuk users) ke Drive agar perangkat lain ikut update
         async function syncUsersToDrive() {
             try {
-                if (typeof driveManager !== 'undefined' && driveConnection.isConnected) {
-                    const backup = await dbManager.exportAllData();
-                    await driveManager.saveToDrive(backup);
-                    console.log('✅ User tersinkron ke Drive');
+                // Init Drive API dulu
+                await driveManager.init();
+
+                // Jika belum connect, minta login Google
+                if (!driveConnection.isConnected) {
+                    const btn = document.getElementById('btn-sync-drive');
+                    if (btn) btn.textContent = '🔑 Meminta izin Google...';
+                    await driveManager.connect();
                 }
+
+                const backup  = await dbManager.exportAllData();
+                const fileId  = await driveManager.saveToDrive(backup);
+                localStorage.setItem('sdm01_drive_file_id', fileId);
+                showFileIdInfo(fileId);
+                console.log('✅ Data tersinkron ke Drive. File ID:', fileId);
             } catch (e) {
-                console.warn('⚠️ Sync Drive gagal (data tetap tersimpan lokal):', e.message);
+                console.warn('⚠️ Sync Drive gagal:', e.message);
+                alert('Sync gagal: ' + e.message + '\n\nData tetap tersimpan di perangkat ini.');
             }
+        }
+
+        // Tampilkan File ID agar bisa dimasukkan ke drive-config.js
+        function showFileIdInfo(fileId) {
+            let el = document.getElementById('file-id-banner');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'file-id-banner';
+                el.className = 'fixed bottom-4 right-4 bg-green-700 text-white p-4 rounded-xl shadow-2xl max-w-sm z-50 text-sm';
+                document.body.appendChild(el);
+            }
+            el.innerHTML = `
+                <p class="font-bold mb-1">✅ Sync berhasil!</p>
+                <p class="mb-2 text-xs">Agar semua perangkat bisa login tanpa setup, salin File ID ini ke <code>drive-config.js</code> pada baris <code>DB_FILE_ID:</code></p>
+                <div class="bg-green-900 rounded p-2 font-mono text-xs break-all mb-2">${fileId}</div>
+                <div class="flex gap-2">
+                    <button onclick="navigator.clipboard.writeText('${fileId}').then(()=>this.textContent='✅ Disalin!')"
+                        class="flex-1 bg-white text-green-700 font-bold py-1 rounded text-xs">Salin ID</button>
+                    <button onclick="this.closest('#file-id-banner').remove()"
+                        class="px-3 bg-green-600 rounded text-xs">✕</button>
+                </div>`;
         }
 
         async function syncToDrive() {
