@@ -924,10 +924,18 @@
             } catch(e) { alert('Gagal: ' + e.message); }
         }
 
+        // Token disimpan di sessionStorage — login Google hanya diminta
+        // SEKALI per sesi browser. Navigasi antar halaman tidak meminta ulang.
         async function ensureSheetsWrite() {
             if (sheetsManager.isConnected()) return;
-            const toast = showToast('🔑 Memerlukan login Google untuk menyimpan...', 0);
-            try { await sheetsManager.connect(); } finally { toast.remove(); }
+            const toast = showToast('🔑 Menghubungkan ke Google (sekali per sesi)...', 0);
+            try {
+                await sheetsManager.connect();
+            } catch (e) {
+                throw e;
+            } finally {
+                toast.remove();
+            }
         }
 
         async function syncUsersToDrive() {
