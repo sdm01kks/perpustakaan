@@ -4,187 +4,418 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Pustakawan - SDM01 Kukusan</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <style>
-        body { font-family: 'Nunito', sans-serif; }
-        .sidebar { background: linear-gradient(180deg, #1e3a8a 0%, #3730a3 100%); }
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-        .nav-item.active { background: rgba(255, 255, 255, 0.2); border-left: 4px solid #60a5fa; }
+        body { font-family:'Nunito',sans-serif; }
+        .sidebar { background:linear-gradient(180deg,#1e3a8a 0%,#3730a3 100%); }
+        .nav-item.active { background:rgba(255,255,255,0.2); border-left:4px solid #60a5fa; }
+        .nav-item { border-left:4px solid transparent; }
+        /* Mobile bottom nav */
+        @media(max-width:767px){
+            #sidebar { transform:translateX(-100%); transition:transform .3s; position:fixed; z-index:40; }
+            #sidebar.open { transform:translateX(0); }
+            #main-content { margin-left:0 !important; }
+            #bottom-nav { display:flex; }
+        }
+        @media(min-width:768px){
+            #sidebar { transform:translateX(0) !important; }
+            #overlay { display:none !important; }
+            #bottom-nav { display:none; }
+            #hamburger { display:none; }
+        }
+        #bottom-nav { display:none; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex">
+<body class="bg-gray-100 min-h-screen">
 
-    <!-- Sidebar -->
-    <aside class="sidebar w-64 text-white flex flex-col fixed h-full overflow-y-auto">
-        <div class="p-6 border-b border-blue-400/30">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg">📚</div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">SDM01</h1>
-                    <p class="text-xs text-blue-200">Perpustakaan</p>
-                </div>
+<!-- Overlay mobile -->
+<div id="overlay" class="fixed inset-0 bg-black/50 z-30 hidden" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="sidebar w-64 text-white flex flex-col fixed h-full overflow-y-auto z-40">
+    <div class="p-5 border-b border-blue-400/30 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold">📚</div>
+            <div>
+                <h1 class="font-bold text-base leading-tight">SDM01</h1>
+                <p class="text-xs text-blue-200">Perpustakaan</p>
             </div>
         </div>
+        <button onclick="closeSidebar()" class="md:hidden text-white/70 hover:text-white text-xl">✕</button>
+    </div>
 
-        <nav class="flex-1 py-4">
-            <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">📊</span><span>Dashboard</span>
-            </a>
-            <a href="#" onclick="showSection('books')" id="nav-books" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">📖</span><span>Kelola Buku</span>
-            </a>
-            <a href="#" onclick="showSection('members')" id="nav-members" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">👥</span><span>Anggota</span>
-            </a>
-            <a href="#" onclick="showSection('users')" id="nav-users" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">👤</span><span>Kelola User</span>
-            </a>
-            <a href="sirkulasi.html" class="nav-item flex items-center gap-3 px-6 py-3 hover:bg-white/10 transition-all">
-                <span class="text-xl">🔄</span><span>Sirkulasi →</span>
-            </a>
-        </nav>
+    <nav class="flex-1 py-3">
+        <a href="#" onclick="showSection('dashboard');closeSidebar()" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
+            <span class="text-lg">📊</span><span>Dashboard</span>
+        </a>
+        <a href="#" onclick="showSection('books');closeSidebar()" id="nav-books" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
+            <span class="text-lg">📖</span><span>Kelola Buku</span>
+        </a>
+        <a href="#" onclick="showSection('members');closeSidebar()" id="nav-members" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
+            <span class="text-lg">👥</span><span>Anggota</span>
+        </a>
+        <a href="#" onclick="showSection('users');closeSidebar()" id="nav-users" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
+            <span class="text-lg">👤</span><span>Kelola User</span>
+        </a>
+        <a href="sirkulasi.html" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
+            <span class="text-lg">🔄</span><span>Sirkulasi →</span>
+        </a>
+    </nav>
 
-        <!-- User Info & Logout -->
-        <div class="p-4 border-t border-blue-400/30">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold">👤</div>
-                <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-sm truncate" id="user-name">Memuat...</p>
-                    <p class="text-xs text-blue-200" id="user-role">Pustakawan</p>
-                </div>
+    <div class="p-4 border-t border-blue-400/30">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-9 h-9 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold text-sm">👤</div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm truncate" id="user-name">Memuat...</p>
+                <p class="text-xs text-blue-200" id="user-role"></p>
             </div>
-            
-            <!-- PIN Display -->
-            <div class="mb-3 bg-blue-800/50 rounded-lg p-2">
-                <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs text-blue-200">PIN Saya:</span>
-                    <button onclick="togglePinDisplay()" class="text-xs text-white hover:text-blue-200">👁️ Lihat</button>
-                </div>
-                <p id="pin-display" class="text-center font-mono text-lg tracking-widest text-white">••••••</p>
+        </div>
+        <button onclick="logoutPustakawan()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold">
+            🚪 Logout
+        </button>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<div id="main-content" class="md:ml-64 min-h-screen flex flex-col">
+
+    <!-- Top Header -->
+    <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+        <div class="flex items-center gap-3">
+            <button id="hamburger" onclick="openSidebar()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <div>
+                <h2 class="text-lg font-bold text-gray-800" id="page-title">Dashboard</h2>
+                <p class="text-xs text-gray-500" id="current-date"></p>
             </div>
-            
-            <button onclick="logoutPustakawan()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold transition-all">
-                🚪 Logout
+        </div>
+        <div class="flex gap-2">
+            <button onclick="exportToExcel()" class="hidden sm:flex bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg items-center gap-1 text-sm">
+                <span>📊</span><span class="hidden md:inline">Export</span>
             </button>
         </div>
-    </aside>
+    </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 ml-64 p-8">
-        
-        <!-- Header -->
-        <header class="mb-8 flex justify-between items-center">
-            <div>
-                <h2 class="text-3xl font-bold text-gray-800" id="page-title">Dashboard</h2>
-                <p class="text-gray-600" id="current-date">Memuat tanggal...</p>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="showImportModal('books')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span>📥</span><span>Import Buku</span>
-                </button>
-                <button onclick="showImportModal('members')" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span>📥</span><span>Import Anggota</span>
-                </button>
-                <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span>📊</span><span>Export</span>
-                </button>
-            </div>
-        </header>
+    <!-- Page Content -->
+    <main class="flex-1 p-4 md:p-6">
 
         <!-- SECTION: Dashboard -->
-        <section id="section-dashboard" class="space-y-6">
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl">📚</div>
-                        <span class="text-green-500 text-sm font-semibold">Total</span>
+        <section id="section-dashboard" class="space-y-5">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+                <div class="bg-white rounded-xl p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-xl">📚</div>
+                        <span class="text-blue-500 text-xs font-semibold">Total</span>
                     </div>
-                    <p class="text-3xl font-bold text-gray-800" id="stat-total-books">0</p>
-                    <p class="text-gray-600 text-sm">Jumlah Buku</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-total-books">0</p>
+                    <p class="text-gray-500 text-xs mt-1">Jumlah Buku</p>
                 </div>
-
-                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">✅</div>
-                        <span class="text-green-500 text-sm font-semibold">Tersedia</span>
+                <div class="bg-white rounded-xl p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-xl">✅</div>
+                        <span class="text-green-500 text-xs font-semibold">Tersedia</span>
                     </div>
-                    <p class="text-3xl font-bold text-gray-800" id="stat-available">0</p>
-                    <p class="text-gray-600 text-sm">Buku Tersedia</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-available">0</p>
+                    <p class="text-gray-500 text-xs mt-1">Buku Tersedia</p>
                 </div>
-
-                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl">📤</div>
-                        <span class="text-orange-500 text-sm font-semibold">Dipinjam</span>
+                <div class="bg-white rounded-xl p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-xl">📤</div>
+                        <span class="text-orange-500 text-xs font-semibold">Dipinjam</span>
                     </div>
-                    <p class="text-3xl font-bold text-gray-800" id="stat-borrowed">0</p>
-                    <p class="text-gray-600 text-sm">Sedang Dipinjam</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-borrowed">0</p>
+                    <p class="text-gray-500 text-xs mt-1">Sedang Dipinjam</p>
                 </div>
-
-                <div class="bg-white rounded-xl p-6 shadow-sm card-hover transition-all">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-2xl">👥</div>
-                        <span class="text-purple-500 text-sm font-semibold">Aktif</span>
+                <div class="bg-white rounded-xl p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-xl">👥</div>
+                        <span class="text-purple-500 text-xs font-semibold">Aktif</span>
                     </div>
-                    <p class="text-3xl font-bold text-gray-800" id="stat-members">0</p>
-                    <p class="text-gray-600 text-sm">Anggota Aktif</p>
+                    <p class="text-2xl font-bold text-gray-800" id="stat-members">0</p>
+                    <p class="text-gray-500 text-xs mt-1">Anggota</p>
                 </div>
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <h3 class="font-bold text-lg mb-4 text-gray-800">⚡ Aksi Cepat</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <a href="sirkulasi.html" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-all text-center block">
-                        <div class="text-2xl mb-2">📤</div>
-                        <div class="font-semibold text-sm">Pinjamkan</div>
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <h3 class="font-bold text-base mb-3 text-gray-800">⚡ Aksi Cepat</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <a href="sirkulasi.html" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg text-center block transition-all">
+                        <div class="text-xl mb-1">📤</div>
+                        <div class="font-semibold text-xs">Pinjamkan</div>
                     </a>
-                    <a href="sirkulasi.html?tab=kembali" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-all text-center block">
-                        <div class="text-2xl mb-2">📥</div>
-                        <div class="font-semibold text-sm">Terima Kembali</div>
+                    <a href="sirkulasi.html?tab=kembali" class="bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg text-center block transition-all">
+                        <div class="text-xl mb-1">📥</div>
+                        <div class="font-semibold text-xs">Terima Kembali</div>
                     </a>
-                    <button onclick="showSection('books')" class="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-lg transition-all text-center">
-                        <div class="text-2xl mb-2">➕</div>
-                        <div class="font-semibold text-sm">Tambah Buku</div>
+                    <button onclick="openModal('add-book')" class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg text-center transition-all">
+                        <div class="text-xl mb-1">➕</div>
+                        <div class="font-semibold text-xs">Tambah Buku</div>
                     </button>
-                    <button onclick="showSection('members')" class="bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-lg transition-all text-center">
-                        <div class="text-2xl mb-2">👤</div>
-                        <div class="font-semibold text-sm">Tambah Anggota</div>
+                    <button onclick="openModal('add-member')" class="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-lg text-center transition-all">
+                        <div class="text-xl mb-1">👤</div>
+                        <div class="font-semibold text-xs">Tambah Anggota</div>
                     </button>
                 </div>
             </div>
 
+            <!-- Import buttons (mobile friendly) -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="showImportModal('books')" class="bg-white border border-purple-200 text-purple-700 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-purple-50">
+                    <span>📥</span><span>Import Buku</span>
+                </button>
+                <button onclick="showImportModal('members')" class="bg-white border border-orange-200 text-orange-700 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-orange-50">
+                    <span>📥</span><span>Import Anggota</span>
+                </button>
+            </div>
+
             <!-- Recent Loans -->
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <h3 class="font-bold text-lg mb-4 text-gray-800">🕐 Peminjaman Terbaru</h3>
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <h3 class="font-bold text-base mb-3 text-gray-800">🕐 Peminjaman Terbaru</h3>
                 <div id="recent-loans" class="space-y-3 max-h-64 overflow-y-auto">
-                    <p class="text-gray-500 text-center py-4">Memuat...</p>
+                    <p class="text-gray-500 text-center py-4 text-sm">Memuat...</p>
                 </div>
             </div>
         </section>
 
         <!-- SECTION: Books -->
-        <section id="section-books" class="hidden space-y-6">
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
-                    <h3 class="font-bold text-lg">📖 Daftar Buku</h3>
+        <section id="section-books" class="hidden space-y-4">
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="font-bold text-base">📖 Daftar Buku</h3>
                     <div class="flex gap-2">
-                        <button onclick="printAllLabels()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
-                            <span>🖨️</span><span>Cetak Label QR</span>
+                        <button onclick="printAllLabels()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs flex items-center gap-1">
+                            <span>🖨️</span><span class="hidden sm:inline">Cetak QR</span>
                         </button>
-                        <button onclick="openModal('add-book')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
-                            <span>➕</span><span>Tambah Buku</span>
+                        <button onclick="openModal('add-book')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs flex items-center gap-1">
+                            <span>➕</span><span>Tambah</span>
                         </button>
                     </div>
                 </div>
-                
+                <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                    <input type="text" id="book-search" placeholder="Cari judul, pengarang, kode..."
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        onkeyup="searchBooks()">
+                    <select id="book-filter" onchange="searchBooks()" class="px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm">
+                        <option value="">Semua Kategori</option>
+                        <option value="000">Umum (000)</option>
+                        <option value="200">Agama (200)</option>
+                        <option value="400">Bahasa (400)</option>
+                        <option value="500">IPA/Mat (500)</option>
+                        <option value="700">Seni/OR (700)</option>
+                        <option value="800">Sastra (800)</option>
+                        <option value="900">Sejarah (900)</option>
+                        <option value="F">Fiksi (F)</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto -mx-4 px-4">
+                    <table class="w-full text-left text-sm min-w-[500px]">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Kode</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Judul</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600 hidden sm:table-cell">Pengarang</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Status</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="books-table-body" class="divide-y divide-gray-100">
+                            <tr><td colspan="5" class="px-3 py-8 text-center text-gray-500 text-sm">Memuat data buku...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: Members -->
+        <section id="section-members" class="hidden space-y-4">
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="font-bold text-base">👥 Daftar Anggota</h3>
+                    <button onclick="openModal('add-member')" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg text-xs flex items-center gap-1">
+                        <span>➕</span><span>Tambah</span>
+                    </button>
+                </div>
+                <input type="text" id="member-search" placeholder="Cari NIS atau nama..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm mb-4"
+                    onkeyup="searchMembers()">
+                <div class="overflow-x-auto -mx-4 px-4">
+                    <table class="w-full text-left text-sm min-w-[400px]">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">NIS</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Nama</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600 hidden sm:table-cell">Kelas</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Status</th>
+                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-table-body" class="divide-y divide-gray-100">
+                            <tr><td colspan="5" class="px-3 py-8 text-center text-gray-500 text-sm">Memuat data anggota...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: Kelola User -->
+        <section id="section-users" class="hidden space-y-4">
+
+            <!-- Info banner -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                <p class="font-semibold mb-1">ℹ️ Tentang Kelola User</p>
+                <p>Data user disimpan di Google Sheets dan langsung aktif di semua perangkat. Perubahan tidak perlu sync manual.</p>
+            </div>
+
+            <!-- Daftar user -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center flex-wrap gap-2">
+                    <h3 class="font-bold text-base">👤 Daftar User Login</h3>
+                    <button onclick="document.getElementById('form-add-user').classList.toggle('hidden')"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1">
+                        <span>➕</span><span>Tambah User</span>
+                    </button>
+                </div>
+
+                <!-- Form tambah (collapsible) -->
+                <div id="form-add-user" class="hidden border-b border-gray-100 p-4 bg-blue-50">
+                    <h4 class="font-semibold text-sm text-blue-800 mb-3">➕ Data User Baru</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Nama Lengkap *</label>
+                            <input type="text" id="new-user-nama" placeholder="Nama Lengkap"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+                            <input type="email" id="new-user-email" placeholder="email@sekolah.com"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Role *</label>
+                            <select id="new-user-role" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="pustakawan">Pustakawan</option>
+                                <option value="admin">Admin</option>
+                                <option value="guru">Guru</option>
+                                <option value="siswa">Siswa</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">PIN (6 digit) *</label>
+                            <input type="tel" id="new-user-pin" placeholder="123456" maxlength="6" pattern="\d{6}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none tracking-widest text-center">
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="saveNewUser()"
+                            class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm">Simpan</button>
+                        <button onclick="document.getElementById('form-add-user').classList.add('hidden')"
+                            class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
+                    </div>
+                </div>
+
+                <!-- User cards (mobile) / table (desktop) -->
+                <div id="users-table-body" class="divide-y divide-gray-100">
+                    <div class="px-4 py-8 text-center text-gray-400 text-sm">Memuat dari Google Sheets...</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Bottom navigation (mobile only) -->
+<nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
+    <div class="flex">
+        <button onclick="showSection('dashboard')" id="bnav-dashboard" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-blue-600">
+            <span class="text-xl">📊</span><span class="text-xs font-medium">Beranda</span>
+        </button>
+        <button onclick="showSection('books')" id="bnav-books" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
+            <span class="text-xl">📖</span><span class="text-xs">Buku</span>
+        </button>
+        <button onclick="showSection('members')" id="bnav-members" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
+            <span class="text-xl">👥</span><span class="text-xs">Anggota</span>
+        </button>
+        <button onclick="showSection('users')" id="bnav-users" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
+            <span class="text-xl">👤</span><span class="text-xs">User</span>
+        </button>
+        <a href="sirkulasi.html" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
+            <span class="text-xl">🔄</span><span class="text-xs">Sirkulasi</span>
+        </a>
+    </div>
+</nav>
+
+<!-- Padding bottom untuk bottom nav di mobile -->
+<div class="h-16 md:hidden"></div>
+
+
+    <!-- Modal Edit User -->
+    <div id="modal-edit-user" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl w-full max-w-sm shadow-2xl">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 class="font-bold text-base">✏️ Edit User</h3>
+                <button onclick="closeModalUser()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 space-y-3">
+                <input type="hidden" id="edit-user-original-email">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                    <input type="text" id="edit-user-nama"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="edit-user-email"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                    <select id="edit-user-role" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
+                        <option value="superadmin">Superadmin</option>
+                        <option value="admin">Admin</option>
+                        <option value="pustakawan">Pustakawan</option>
+                        <option value="guru">Guru</option>
+                        <option value="siswa">Siswa</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">PIN Baru <span class="text-gray-400">(kosongkan jika tidak diubah)</span></label>
+                    <input type="tel" id="edit-user-pin" placeholder="6 digit angka" maxlength="6" pattern="\d{6}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest">
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-xs font-medium text-gray-700">Status Akun</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="edit-user-active" class="sr-only peer">
+                        <div class="w-10 h-5 bg-gray-300 peer-checked:bg-green-500 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                    </label>
+                    <span id="edit-user-active-label" class="text-xs text-gray-500">Aktif</span>
+                </div>
+            </div>
+            <div class="p-4 border-t flex gap-2">
+                <button onclick="saveUserEdit()"
+                    class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm">
+                    💾 Simpan
+                </button>
+                <button onclick="deleteUser(document.getElementById('edit-user-original-email').value)"
+                    class="py-2 px-4 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-semibold text-sm">
+                    🗑️
+                </button>
+                <button onclick="closeModalUser()"
+                    class="py-2 px-4 bg-gray-100 text-gray-600 rounded-lg text-sm">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
                 <div class="flex gap-4 mb-4">
                     <input type="text" id="book-search" placeholder="Cari judul, pengarang, atau kode..." 
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -257,99 +488,6 @@
             </div>
         </section>
 
-        <!-- ═══ SECTION: KELOLA USER ══════════════════════════════════════════ -->
-        <section id="section-users" class="hidden space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-4 border-b border-gray-100 flex justify-between items-center flex-wrap gap-2">
-                    <h3 class="font-bold text-lg">👤 Daftar User Login</h3>
-                    <div class="flex gap-2">
-                        <button id="btn-sync-drive" onclick="syncUsersToDrive()"
-                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1">
-                            <span>☁️</span><span>Sync ke Drive</span>
-                        </button>
-                        <button onclick="document.getElementById('form-add-user').classList.toggle('hidden')"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1">
-                            <span>➕</span><span>Tambah User</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 font-semibold text-gray-600">Nama</th>
-                                <th class="px-4 py-3 font-semibold text-gray-600">Email</th>
-                                <th class="px-4 py-3 font-semibold text-gray-600">Role</th>
-                                <th class="px-4 py-3 font-semibold text-gray-600">PIN</th>
-                                <th class="px-4 py-3 font-semibold text-gray-600">Status</th>
-                                <th class="px-4 py-3 font-semibold text-gray-600">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body" class="divide-y divide-gray-100">
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Memuat data...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Form Tambah User -->
-            <div id="form-add-user" class="hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 class="font-bold text-lg mb-4">➕ Tambah User Baru</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
-                        <input type="text" id="new-user-nama" placeholder="Nama Lengkap"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                        <input type="email" id="new-user-email" placeholder="email@sekolah.com"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-                        <select id="new-user-role" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="pustakawan">Pustakawan</option>
-                            <option value="admin">Admin</option>
-                            <option value="guru">Guru</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">PIN (6 digit) *</label>
-                        <input type="password" id="new-user-pin" placeholder="••••••" maxlength="6"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none tracking-widest">
-                    </div>
-                </div>
-                <div class="flex gap-3 mt-4">
-                    <button onclick="saveNewUser()"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Simpan User</button>
-                    <button onclick="document.getElementById('form-add-user').classList.add('hidden')"
-                        class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Batal</button>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Modal Edit PIN -->
-    <div id="modal-edit-pin" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-sm mx-4 shadow-2xl">
-            <h3 class="font-bold text-lg mb-1">🔑 Edit PIN</h3>
-            <p id="edit-pin-user-name" class="text-sm text-gray-500 mb-4"></p>
-            <input type="hidden" id="edit-pin-user-id">
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">PIN Baru (6 digit)</label>
-                <input type="password" id="edit-pin-value" placeholder="••••••" maxlength="6"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest text-xl">
-            </div>
-            <div class="flex gap-3">
-                <button onclick="savePinEdit()"
-                    class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">Simpan PIN</button>
-                <button onclick="document.getElementById('modal-edit-pin').classList.add('hidden')"
-                    class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg">Batal</button>
-            </div>
-        </div>
-    </div>
     <div id="modal-add-book" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
         <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
@@ -539,11 +677,12 @@
     </div>
         
     <!-- Scripts -->
+
     <script src="../core/db.js"></script>
     <script src="../core/sheets-config.js"></script>
     <script src="../core/drive-config.js"></script>
     <script src="../core/auth.js"></script>
-
+    <script>
     <script>
         // State
         const AppState = {
@@ -608,29 +747,202 @@
         }
 
         // Navigation
-        function showSection(sectionName) {
-            ['dashboard', 'books', 'members', 'users'].forEach(s => {
-                document.getElementById('section-' + s).classList.add('hidden');
-                document.getElementById('nav-' + s).classList.remove('active');
-            });
-
-            document.getElementById('section-' + sectionName).classList.remove('hidden');
-            document.getElementById('nav-' + sectionName).classList.add('active');
-
-            const titles = {
-                'dashboard': 'Dashboard',
-                'books': 'Kelola Buku',
-                'members': 'Manajemen Anggota',
-                'users': 'Kelola User Login'
-            };
-            document.getElementById('page-title').textContent = titles[sectionName];
-
-            if (sectionName === 'books') loadBooks();
-            if (sectionName === 'members') loadMembers();
-            if (sectionName === 'users') loadUsers();
+        // ── SIDEBAR MOBILE ───────────────────────────────────────────────
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.add('hidden');
         }
 
-        // Stats
+        // ── SHOW SECTION (update bottom nav juga) ───────────────────────
+        function showSection(sectionName) {
+            ['dashboard','books','members','users'].forEach(s => {
+                document.getElementById('section-'+s).classList.add('hidden');
+                document.getElementById('nav-'+s).classList.remove('active');
+                const bn = document.getElementById('bnav-'+s);
+                if(bn){ bn.className='flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400'; }
+            });
+            document.getElementById('section-'+sectionName).classList.remove('hidden');
+            document.getElementById('nav-'+sectionName).classList.add('active');
+            const activeBn = document.getElementById('bnav-'+sectionName);
+            if(activeBn){ activeBn.className='flex-1 py-3 flex flex-col items-center gap-0.5 text-blue-600'; }
+            const titles = { dashboard:'Dashboard', books:'Kelola Buku', members:'Anggota', users:'Kelola User' };
+            document.getElementById('page-title').textContent = titles[sectionName] || sectionName;
+            if(sectionName==='books')   loadBooks();
+            if(sectionName==='members') loadMembers();
+            if(sectionName==='users')   loadUsers();
+        }
+
+        // ── KELOLA USER (Sheets) ─────────────────────────────────────────
+        async function loadUsers() {
+            const container = document.getElementById('users-table-body');
+            container.innerHTML = '<div class="px-4 py-8 text-center text-gray-400 text-sm">Memuat dari Google Sheets...</div>';
+            try {
+                const users = await sheetsManager.fetchUsers();
+                if (users.length === 0) {
+                    container.innerHTML = '<div class="px-4 py-8 text-center text-gray-400 text-sm">Belum ada user di Google Sheets.</div>';
+                    return;
+                }
+                // Update IndexedDB lokal
+                await dbManager.db.users.clear();
+                await dbManager.db.users.bulkAdd(users);
+
+                // Render sebagai cards (mobile-friendly)
+                container.innerHTML = users.map(u => `
+                    <div class="p-4 flex items-center justify-between gap-3 hover:bg-gray-50">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0
+                                ${u.role==='superadmin'?'bg-purple-500':u.role==='admin'?'bg-blue-500':u.role==='pustakawan'?'bg-green-500':u.role==='guru'?'bg-orange-500':'bg-gray-400'}">
+                                ${u.nama.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-sm text-gray-800 truncate">${u.nama}</p>
+                                <p class="text-xs text-gray-500 truncate">${u.email}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                        ${u.role==='superadmin'?'bg-purple-100 text-purple-700':u.role==='admin'?'bg-blue-100 text-blue-700':u.role==='pustakawan'?'bg-green-100 text-green-700':u.role==='guru'?'bg-orange-100 text-orange-700':'bg-gray-100 text-gray-600'}">${u.role}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${u.is_active?'bg-green-100 text-green-700':'bg-red-100 text-red-600'}">
+                                        ${u.is_active?'Aktif':'Nonaktif'}
+                                    </span>
+                                    ${!u.pin?'<span class="text-xs text-red-400">⚠️ No PIN</span>':''}
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="openEditUser('${u.email}')"
+                            class="flex-shrink-0 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs hover:bg-blue-50 hover:text-blue-600 font-semibold">
+                            ✏️ Edit
+                        </button>
+                    </div>`).join('');
+            } catch (e) {
+                container.innerHTML = `<div class="px-4 py-8 text-center text-red-400 text-sm">Gagal memuat: ${e.message}</div>`;
+            }
+        }
+
+        // Buka modal edit user
+        async function openEditUser(email) {
+            try {
+                const users = await sheetsManager.fetchUsers();
+                const u = users.find(x => x.email === email);
+                if (!u) { alert('User tidak ditemukan'); return; }
+
+                document.getElementById('edit-user-original-email').value = u.email;
+                document.getElementById('edit-user-nama').value  = u.nama;
+                document.getElementById('edit-user-email').value = u.email;
+                document.getElementById('edit-user-role').value  = u.role;
+                document.getElementById('edit-user-pin').value   = '';
+                document.getElementById('edit-user-active').checked = u.is_active;
+                document.getElementById('edit-user-active-label').textContent = u.is_active ? 'Aktif' : 'Nonaktif';
+                document.getElementById('edit-user-active').onchange = function() {
+                    document.getElementById('edit-user-active-label').textContent = this.checked ? 'Aktif' : 'Nonaktif';
+                };
+
+                const modal = document.getElementById('modal-edit-user');
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+            } catch(e) { alert('Gagal: ' + e.message); }
+        }
+
+        function closeModalUser() {
+            const modal = document.getElementById('modal-edit-user');
+            modal.classList.add('hidden');
+            modal.style.display = '';
+        }
+
+        async function saveUserEdit() {
+            const originalEmail = document.getElementById('edit-user-original-email').value;
+            const nama    = document.getElementById('edit-user-nama').value.trim();
+            const email   = document.getElementById('edit-user-email').value.trim();
+            const role    = document.getElementById('edit-user-role').value;
+            const pin     = document.getElementById('edit-user-pin').value.trim();
+            const active  = document.getElementById('edit-user-active').checked;
+
+            if (!nama || !email) { alert('Nama dan email harus diisi'); return; }
+            if (pin && !/^\d{6}$/.test(pin)) { alert('PIN harus 6 digit angka'); return; }
+
+            try {
+                await ensureSheetsWrite();
+
+                // Ambil semua user, update yang sesuai
+                const users = await sheetsManager.fetchUsers();
+                const idx   = users.findIndex(u => u.email === originalEmail);
+                if (idx === -1) { alert('User tidak ditemukan'); return; }
+
+                users[idx] = {
+                    ...users[idx],
+                    nama, email, role,
+                    is_active: active,
+                    ...(pin ? { pin } : {})
+                };
+
+                await sheetsManager.writeUsers(users);
+                closeModalUser();
+                alert('✅ User berhasil diperbarui.');
+                loadUsers();
+            } catch(e) { alert('Gagal simpan: ' + e.message); }
+        }
+
+        async function deleteUser(email) {
+            if (!email) return;
+            const users = await sheetsManager.fetchUsers().catch(() => []);
+            const u     = users.find(x => x.email === email);
+            if (!u) return;
+            if (!confirm(`Hapus user "${u.nama}" (${email})?\n\nTindakan ini tidak bisa dibatalkan.`)) return;
+            if (u.role === 'superadmin') { alert('Superadmin tidak bisa dihapus.'); return; }
+
+            try {
+                await ensureSheetsWrite();
+                const filtered = users.filter(x => x.email !== email);
+                await sheetsManager.writeUsers(filtered);
+                closeModalUser();
+                alert('✅ User berhasil dihapus.');
+                loadUsers();
+            } catch(e) { alert('Gagal hapus: ' + e.message); }
+        }
+
+        async function saveNewUser() {
+            const nama  = document.getElementById('new-user-nama').value.trim();
+            const email = document.getElementById('new-user-email').value.trim();
+            const role  = document.getElementById('new-user-role').value;
+            const pin   = document.getElementById('new-user-pin').value.trim();
+
+            if (!nama || !email || !pin) { alert('Semua field harus diisi.'); return; }
+            if (!/^\d{6}$/.test(pin))    { alert('PIN harus 6 digit angka.'); return; }
+
+            try {
+                await ensureSheetsWrite();
+                const existing = await sheetsManager.fetchUsers();
+                if (existing.find(u => u.email === email)) { alert('Email sudah terdaftar.'); return; }
+                const newId   = existing.length > 0 ? Math.max(...existing.map(u=>u.id))+1 : 1;
+                await sheetsManager.appendUser({ id: newId, email, nama, role, pin, is_active: true });
+                alert(`✅ User "${nama}" ditambahkan. Bisa login dari perangkat mana saja.`);
+                ['new-user-nama','new-user-email','new-user-pin'].forEach(id => document.getElementById(id).value='');
+                document.getElementById('form-add-user').classList.add('hidden');
+                loadUsers();
+            } catch(e) { alert('Gagal: ' + e.message); }
+        }
+
+        async function ensureSheetsWrite() {
+            if (sheetsManager.isConnected()) return;
+            const toast = showToast('🔑 Memerlukan login Google untuk menyimpan...', 0);
+            try { await sheetsManager.connect(); } finally { toast.remove(); }
+        }
+
+        async function syncUsersToDrive() {
+            alert('ℹ️ Data user langsung tersimpan di Google Sheets.\nTidak perlu sync manual.');
+        }
+
+        // ── TOAST NOTIFICATION ───────────────────────────────────────────
+        function showToast(msg, duration=3000) {
+            const el = document.createElement('div');
+            el.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-xl shadow-xl z-50 text-sm font-medium';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            if (duration > 0) setTimeout(() => el.remove(), duration);
+            return el;
+        }
         async function loadDashboardStats() {
             try {
                 const stats = await dbManager.getStatistics();
@@ -1099,149 +1411,6 @@
 
         // Sync
         // ═══ KELOLA USER (via Google Sheets) ════════════════════════════════
-        async function loadUsers() {
-            const tbody = document.getElementById('users-table-body');
-            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Memuat dari Google Sheets...</td></tr>';
-            try {
-                const users = await sheetsManager.fetchUsers();
-                if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Belum ada user di Google Sheets.</td></tr>';
-                    return;
-                }
-                // Update juga IndexedDB lokal
-                await dbManager.db.users.clear();
-                await dbManager.db.users.bulkAdd(users);
-
-                tbody.innerHTML = users.map(u => `
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium">${u.nama}</td>
-                        <td class="px-4 py-3 text-gray-600 text-xs">${u.email}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                ${u.role==='superadmin'?'bg-purple-100 text-purple-700':
-                                  u.role==='admin'?'bg-blue-100 text-blue-700':
-                                  u.role==='pustakawan'?'bg-green-100 text-green-700':
-                                  'bg-gray-100 text-gray-700'}">${u.role}</span>
-                        </td>
-                        <td class="px-4 py-3 text-gray-500">${u.pin ? '••••••' : '<span class="text-red-400 text-xs">Belum diset</span>'}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                ${u.is_active?'bg-green-100 text-green-700':'bg-red-100 text-red-600'}">
-                                ${u.is_active ? 'Aktif' : 'Nonaktif'}</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex gap-2">
-                                <button onclick="openEditPin('${u.email}', '${u.nama}')"
-                                    class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 font-semibold">
-                                    🔑 Edit PIN
-                                </button>
-                                ${u.role !== 'superadmin' ? `
-                                <button onclick="toggleUserStatus('${u.email}', ${u.is_active})"
-                                    class="px-3 py-1 ${u.is_active?'bg-red-100 text-red-600 hover:bg-red-200':'bg-green-100 text-green-700 hover:bg-green-200'} rounded text-xs font-semibold">
-                                    ${u.is_active ? '🚫 Nonaktif' : '✅ Aktifkan'}
-                                </button>` : ''}
-                            </div>
-                        </td>
-                    </tr>`).join('');
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-400">Gagal memuat: ${e.message}</td></tr>`;
-            }
-        }
-
-        // Pastikan sudah connect ke Google Sheets (dengan OAuth untuk tulis)
-        async function ensureSheetsWrite() {
-            if (sheetsManager.isConnected()) return;
-            const msgEl = document.createElement('div');
-            msgEl.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-xl shadow-xl z-50 text-sm';
-            msgEl.textContent = '🔑 Diperlukan login Google untuk menyimpan perubahan...';
-            document.body.appendChild(msgEl);
-            try {
-                await sheetsManager.connect();
-            } finally {
-                msgEl.remove();
-            }
-        }
-
-        async function saveNewUser() {
-            const nama  = document.getElementById('new-user-nama').value.trim();
-            const email = document.getElementById('new-user-email').value.trim();
-            const role  = document.getElementById('new-user-role').value;
-            const pin   = document.getElementById('new-user-pin').value.trim();
-
-            if (!nama || !email || !pin) { alert('Semua field harus diisi.'); return; }
-            if (!/^\d{6}$/.test(pin))    { alert('PIN harus 6 digit angka.'); return; }
-
-            try {
-                await ensureSheetsWrite();
-
-                // Ambil data terbaru untuk cek duplikat & generate ID
-                const existing = await sheetsManager.fetchUsers();
-                if (existing.find(u => u.email === email)) { alert('Email sudah terdaftar.'); return; }
-
-                const newId   = existing.length > 0 ? Math.max(...existing.map(u => u.id)) + 1 : 1;
-                const newUser = { id: newId, email, nama, role, pin, is_active: true };
-
-                await sheetsManager.appendUser(newUser);
-
-                alert(`✅ User "${nama}" berhasil ditambahkan.\nMereka bisa login dengan email dan PIN tersebut dari perangkat mana saja.`);
-                document.getElementById('new-user-nama').value = '';
-                document.getElementById('new-user-email').value = '';
-                document.getElementById('new-user-pin').value = '';
-                document.getElementById('form-add-user').classList.add('hidden');
-                loadUsers();
-            } catch (e) {
-                alert('Gagal menyimpan: ' + e.message);
-            }
-        }
-
-        function openEditPin(email, userName) {
-            document.getElementById('edit-pin-user-id').value = email; // simpan email sebagai ID
-            document.getElementById('edit-pin-user-name').textContent = `User: ${userName} (${email})`;
-            document.getElementById('edit-pin-value').value = '';
-            const modal = document.getElementById('modal-edit-pin');
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        }
-
-        async function savePinEdit() {
-            const email = document.getElementById('edit-pin-user-id').value;
-            const pin   = document.getElementById('edit-pin-value').value.trim();
-            if (!/^\d{6}$/.test(pin)) { alert('PIN harus 6 digit angka.'); return; }
-
-            try {
-                await ensureSheetsWrite();
-                await sheetsManager.updateUser({ email, pin });
-                const modal = document.getElementById('modal-edit-pin');
-                modal.classList.add('hidden');
-                modal.style.display = '';
-                alert('✅ PIN berhasil diubah. Perubahan langsung aktif di semua perangkat.');
-                loadUsers();
-            } catch (e) {
-                alert('Gagal simpan PIN: ' + e.message);
-            }
-        }
-
-        async function toggleUserStatus(email, currentStatus) {
-            if (!confirm(`${currentStatus ? 'Nonaktifkan' : 'Aktifkan'} user ini?`)) return;
-            try {
-                await ensureSheetsWrite();
-                await sheetsManager.updateUser({ email, is_active: !currentStatus });
-                loadUsers();
-            } catch (e) {
-                alert('Gagal: ' + e.message);
-            }
-        }
-
-        // Tombol Sync di header section users — tidak lagi dibutuhkan untuk user
-        // tapi tetap tersedia untuk sync data buku/sirkulasi ke Drive
-        async function syncUsersToDrive() {
-            try {
-                alert('ℹ️ Data user sudah tersimpan langsung di Google Sheets dan langsung aktif di semua perangkat.\n\nTidak perlu sync manual untuk data user.');
-            } catch (e) {
-                console.warn(e);
-            }
-        }
-
         async function syncToDrive() {
             alert('Fitur sync ke Google Drive akan diimplementasikan di update berikutnya.\n\nUntuk saat ini, gunakan Export Excel sebagai backup.');
         }
@@ -1409,175 +1578,5 @@
     
             // Tampilkan 5 baris pertama
             const previewData = importData.slice(0, 5);
-            const headers = Object.keys(previewData[0] || {});
-    
-            let html = '<thead class="bg-gray-100"><tr>';
-            headers.forEach(h => {
-                html += `<th class="px-2 py-1 text-left font-semibold">${h}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-    
-            previewData.forEach(row => {
-                html += '<tr class="border-t">';
-                headers.forEach(h => {
-                    html += `<td class="px-2 py-1">${row[h] || '-'}</td>`;
-                });
-                html += '</tr>';
-            });
-    
-            if (importData.length > 5) {
-                html += `<tr class="text-center text-gray-500"><td colspan="${headers.length}" class="py-2">... dan ${importData.length - 5} baris lainnya</td></tr>`;
-            }
-    
-            html += '</tbody>';
-            table.innerHTML = html;
-    
-            stats.textContent = `Total: ${importData.length} baris data`;
-            previewDiv.classList.remove('hidden');
-        }
-
-        async function processImport() {
-            const progressDiv = document.getElementById('import-progress');
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
-            const resultsDiv = document.getElementById('import-results');
-            const resultsContent = document.getElementById('results-content');
-    
-            progressDiv.classList.remove('hidden');
-    
-            let success = 0;
-            let failed = 0;
-            let duplicates = 0;
-            let errors = [];
-    
-            for (let i = 0; i < importData.length; i++) {
-                const row = importData[i];
-                const progress = Math.round(((i + 1) / importData.length) * 100);
-        
-                progressBar.style.width = progress + '%';
-                progressText.textContent = progress + '%';
-        
-                try {
-                    if (importType === 'books') {
-                    // Cek duplikat kode_aksesi
-                        if (row.kode_aksesi) {
-                            const existing = await dbManager.db.books.where('kode_aksesi').equals(String(row.kode_aksesi)).first();
-                            if (existing) {
-                                duplicates++;
-                                continue;
-                            }
-                        }
-                
-                    // Generate kode jika kosong
-                    const kode = row.kode_aksesi || dbManager.generateBookCode(row.kategori_ddc);
-                
-                    const bookData = {
-                        kode_aksesi: String(kode),
-                        judul: String(row.judul || ''),
-                        pengarang: String(row.pengarang || ''),
-                        penerbit: String(row.penerbit || ''),
-                        tahun_terbit: parseInt(row.tahun_terbit) || new Date().getFullYear(),
-                        kategori_ddc: String(row.kategori_ddc || '000'),
-                        lokasi_rak: String(row.lokasi_rak || ''),
-                        isbn: row.isbn ? String(row.isbn) : null,
-                        status: 'tersedia'
-                    };
-                
-                    const result = await dbManager.addBook(bookData);
-                        if (result.success) success++;
-                        else {
-                            failed++;
-                            errors.push(`Baris ${i + 1}: ${result.error}`);
-                        }
-                
-                    } else {
-                        // Import anggota
-                        // Cek duplikat NIS
-                        const existing = await dbManager.db.members.where('nis').equals(String(row.nis)).first();
-                        if (existing) {
-                            duplicates++;
-                            continue;
-                        }
-                
-                        const memberData = {
-                            nis: String(row.nis || ''),
-                            nama_lengkap: String(row.nama_lengkap || ''),
-                            kelas: String(row.kelas || ''),
-                            no_hp: row.no_hp ? String(row.no_hp) : null,
-                            email_ortu: row.email_ortu ? String(row.email_ortu) : null,
-                            tipe_anggota: 'siswa',
-                            status: 'aktif'
-                        };
-                
-                        const result = await dbManager.addMember(memberData);
-                        if (result.success) success++;
-                        else {
-                            failed++;
-                            errors.push(`Baris ${i + 1}: ${result.error}`);
-                        }
-                    }
-            
-                    // Delay kecil untuk UI responsive
-                    if (i % 10 === 0) await new Promise(r => setTimeout(r, 10));
-            
-                } catch (error) {
-                    failed++;
-                    errors.push(`Baris ${i + 1}: ${error.message}`);
-                }
-            }
-    
-            // Tampilkan hasil
-            resultsDiv.classList.remove('hidden');
-            resultsContent.innerHTML = `
-                <div class="flex gap-4 text-center">
-                    <div class="flex-1 bg-green-100 rounded-lg p-3">
-                        <div class="text-2xl font-bold text-green-700">${success}</div>
-                        <div class="text-sm text-green-600">Berhasil</div>
-                    </div>
-                    <div class="flex-1 bg-yellow-100 rounded-lg p-3">
-                        <div class="text-2xl font-bold text-yellow-700">${duplicates}</div>
-                        <div class="text-sm text-yellow-600">Duplikat</div>
-                    </div>
-                    <div class="flex-1 bg-red-100 rounded-lg p-3">
-                        <div class="text-2xl font-bold text-red-700">${failed}</div>
-                        <div class="text-sm text-red-600">Gagal</div>
-                    </div>
-                </div>
-            ${errors.length > 0 ? `
-                <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 max-h-32 overflow-y-auto">
-                    <p class="font-semibold text-red-700 text-sm mb-2">Error:</p>
-                    <ul class="text-xs text-red-600 space-y-1">
-                        ${errors.slice(0, 5).map(e => `<li>• ${e}</li>`).join('')}
-                        ${errors.length > 5 ? `<li>... dan ${errors.length - 5} error lainnya</li>` : ''}
-                    </ul>
-                </div>
-            ` : ''}
-                <div class="mt-4 text-center">
-                    <button onclick="finishImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
-                        Selesai
-                    </button>
-                </div>
-            `;
-    
-            // Refresh data
-            if (success > 0) {
-                if (importType === 'books') {
-                    await loadBooks();
-                } else {
-                    await loadMembers();
-                }
-                await loadDashboardStats();
-            }
-        }
-
-        function finishImport() {
-            closeModal('import');
-            // Reset
-            importData = [];
-            importType = '';
-        }
-        
-    </script>
-
 </body>
 </html>
