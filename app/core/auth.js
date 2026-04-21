@@ -66,76 +66,84 @@ class AuthManager {
     // Login dengan PIN (untuk semua user)
     async loginWithPin(nisOrEmail, pin) {
         try {
-            // Cari di tabel users (untuk admin/pustakawan)
+            // Cari di tabel users berdasarkan email
             let user = await dbManager.db.users
                 .where('email')
                 .equals(nisOrEmail)
                 .first();
 
-            // Jika tidak ketemu, coba cari di members untuk siswa
+            // Jika tidak ketemu via email, coba cari via NIS (untuk siswa)
             if (!user) {
                 const member = await dbManager.db.members
                     .where('nis')
                     .equals(nisOrEmail)
                     .first();
-            
+
                 if (member) {
-                    // Buat user record untuk siswa jika belum ada
-                        user = await dbManager.db.users
-                            .where('email')
-                            .equals(member.email_ortu || member.nis + '@student.sdm01')
-                            .first();
-                
-                if (!user) {
-                    // Auto-create user untuk siswa
-                    const userId = await dbManager.db.users.add({
-                        email: member.email_ortu || member.nis + '@student.sdm01',
-                        nama: member.nama_lengkap,
-                        role: 'siswa',
-                        pin: member.nis.slice(-6), // Default PIN: 6 digit terakhir NIS
-                        is_active: true,
-                        createdAt: new Date().toISOString(),
-                        last_login: null,
-                        member_id: member.id
-                    });
-                    user = await dbManager.db.users.get(userId);
+                    // Tentukan email untuk akun siswa ini
+                    const memberEmail = member.email_ortu || (member.nis + '@student.sdm01');
+                    user = await dbManager.db.users
+                        .where('email')
+                        .equals(memberEmail)
+                        .first();
+
+                    // Auto-create akun siswa jika belum ada
+                    if (!user) {
+                        const defaultPin = String(member.nis).slice(-6).padStart(6, '0');
+                        const userId = await dbManager.db.users.add({
+                            email: memberEmail,
+                            nama: member.nama_lengkap,
+                            role: 'siswa',
+                            pin: defaultPin, // Default PIN: 6 digit terakhir NIS
+                            is_active: true,
+                            createdAt: new Date().toISOString(),
+                            last_login: null,
+                            member_id: member.id
+                        });
+                        user = await dbManager.db.users.get(userId);
+                        console.log('✅ Akun siswa otomatis dibuat:', memberEmail, 'PIN default:', defaultPin);
+                    }
                 }
             }
+
+            if (!user) {
+                return { success: false, error: 'Email/NIS tidak ditemukan di sistem' };
+            }
+
+            if (!user.is_active) {
+                return { success: false, error: 'Akun tidak aktif. Hubungi admin.' };
+            }
+
+            // Cek apakah PIN sudah di-setup
+            if (user.pin === null || user.pin === undefined || user.pin === '') {
+                return { success: false, error: 'Akun belum memiliki PIN. Hubungi superadmin untuk setup.' };
+            }
+
+            // Verifikasi PIN (konversi ke String untuk menghindari type mismatch)
+            if (String(user.pin) !== String(pin)) {
+                return { success: false, error: 'PIN salah. Silakan coba lagi.' };
+            }
+
+            // Update last login
+            await dbManager.db.users.update(user.id, {
+                last_login: new Date().toISOString()
+            });
+
+            // Set session
+            this.currentUser = user;
+            localStorage.setItem(this.sessionKey, JSON.stringify(user));
+
+            return {
+                success: true,
+                user: user,
+                role: user.role,
+                redirect: this.getDefaultRoute(user.role)
+            };
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, error: 'Terjadi kesalahan sistem: ' + error.message };
         }
-
-        if (!user) {
-            return { success: false, error: 'Email/NIS tidak ditemukan' };
-        }
-
-        if (!user.is_active) {
-            return { success: false, error: 'Akun tidak aktif' };
-        }
-
-        // Verifikasi PIN
-        if (user.pin !== pin) {
-            return { success: false, error: 'PIN salah' };
-        }
-
-        // Update last login
-        await dbManager.db.users.update(user.id, {
-            last_login: new Date().toISOString()
-        });
-
-        // Set session
-        this.currentUser = user;
-        localStorage.setItem(this.sessionKey, JSON.stringify(user));
-
-        return { 
-            success: true, 
-            user: user,
-            role: user.role,
-            redirect: this.getDefaultRoute(user.role)
-        };
-    } catch (error) {
-        console.error('Login error:', error);
-        return { success: false, error: error.message };
     }
-}
 
     // Login dengan Google (untuk superadmin/admin)
     async loginWithGoogle() {
@@ -267,13 +275,13 @@ class AuthManager {
     // Get default route berdasarkan role
     getDefaultRoute(role) {
         const routes = {
-            [ROLES.SUPERADMIN]: '/app/dashboard/admin.html',
-            [ROLES.ADMIN]: '/app/dashboard/admin.html',
-            [ROLES.PUSTAKAWAN]: '/app/dashboard/pustakawan.html',
-            [ROLES.GURU]: '/app/dashboard/guru.html',
-            [ROLES.SISWA]: '/app/dashboard/siswa.html'
+            [ROLES.SUPERADMIN]: 'app/dashboard/pustakawan.html',
+            [ROLES.ADMIN]: 'app/dashboard/pustakawan.html',
+            [ROLES.PUSTAKAWAN]: 'app/dashboard/pustakawan.html',
+            [ROLES.GURU]: 'app/dashboard/guru.html',
+            [ROLES.SISWA]: 'app/dashboard/siswa.html'
         };
-        return routes[role] || '/app/dashboard/public.html';
+        return routes[role] || 'app/dashboard/siswa.html';
     }
 
     // Setup PIN pertama kali (untuk superadmin)

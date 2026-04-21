@@ -99,26 +99,12 @@ class DatabaseManager {
                 { key: 'loan_days_student', value: 7 },
                 { key: 'loan_days_teacher', value: 14 },
                 { key: 'denda_per_day', value: 1000 },
-                { key: 'app_version', value: '1.0.0' }
+                { key: 'app_version', value: '1.2.0' }
             ]);
             console.log('✅ Settings default dibuat');
         }
-
-        // Cek apakah sudah ada superadmin
-        const hasAdmin = await this.db.users.where('role').equals('superadmin').first();
-        if (!hasAdmin) {
-            // Setup default superadmin (password akan di-setup di auth.js)
-            await this.db.users.add({
-                email: 'arif.azwar79@gmail.com',
-                nama: 'Arif Azwar',
-                role: 'superadmin',
-                pin: null, // Akan di-set saat first login
-                is_active: true,
-                createdAt: new Date().toISOString(),
-                last_login: null
-            });
-            console.log('✅ Superadmin default dibuat');
-        }
+        // CATATAN: Superadmin dibuat melalui setup.html, bukan di sini.
+        // Ini mencegah konflik dengan data yang sudah di-sync dari Google Sheets.
     }
 
     // ==================== CRUD BUKU ====================
