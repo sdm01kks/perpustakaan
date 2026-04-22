@@ -1,688 +1,556 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Pustakawan - SDM01 Kukusan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        body { font-family:'Nunito',sans-serif; }
-        .sidebar { background:linear-gradient(180deg,#1e3a8a 0%,#3730a3 100%); }
-        .nav-item.active { background:rgba(255,255,255,0.2); border-left:4px solid #60a5fa; }
-        .nav-item { border-left:4px solid transparent; }
-        /* Mobile bottom nav */
-        @media(max-width:767px){
-            #sidebar { transform:translateX(-100%); transition:transform .3s; position:fixed; z-index:40; }
-            #sidebar.open { transform:translateX(0); }
-            #main-content { margin-left:0 !important; }
-            #bottom-nav { display:flex; }
-        }
-        @media(min-width:768px){
-            #sidebar { transform:translateX(0) !important; }
-            #overlay { display:none !important; }
-            #bottom-nav { display:none; }
-            #hamburger { display:none; }
-        }
-        #bottom-nav { display:none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Pustakawan — Perpustakaan SDM01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="../../assets/design.css">
+<style>
+  /* Page-specific overrides */
+  body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  .sidebar { scrollbar-width: thin; }
+  .section-hidden { display: none !important; }
+  .nav-item { cursor: pointer; }
+
+  /* Bottom nav (mobile) */
+  .bottom-nav {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+    background: #fff; border-top: 1px solid var(--border);
+    z-index: 150; align-items: stretch;
+  }
+  .bnav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; font-size: 10px; font-weight: 600;
+    color: var(--ink-muted); cursor: pointer; text-decoration: none;
+    border: none; background: none; font-family: inherit; padding: 0;
+    transition: color .15s;
+  }
+  .bnav-item.active { color: var(--green-dark); }
+  .bnav-item .bnav-icon { font-size: 18px; }
+
+  /* Recent loans list */
+  .loan-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px;
+  }
+  .loan-item:last-child { border-bottom: none; }
+  .loan-item:hover { background: var(--green-ghost); }
+  .loan-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .loan-meta  { font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+  .loan-due   { font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
+  .loan-due.late { color: var(--red); font-weight: 600; }
+
+  /* Import modal styles */
+  .import-preview { overflow-x: auto; margin-top: 12px; }
+  .import-preview table { font-size: 11px; }
+
+  @media (max-width: 768px) {
+    .bottom-nav { display: flex; }
+    .main { padding-bottom: 72px !important; }
+    .sidebar { padding-bottom: 0; }
+  }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-<!-- Overlay mobile -->
-<div id="overlay" class="fixed inset-0 bg-black/50 z-30 hidden" onclick="closeSidebar()"></div>
-
-<!-- Sidebar -->
-<aside id="sidebar" class="sidebar w-64 text-white flex flex-col fixed h-full overflow-y-auto z-40">
-    <div class="p-5 border-b border-blue-400/30 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold">📚</div>
-            <div>
-                <h1 class="font-bold text-base leading-tight">SDM01</h1>
-                <p class="text-xs text-blue-200">Perpustakaan</p>
-            </div>
-        </div>
-        <button onclick="closeSidebar()" class="md:hidden text-white/70 hover:text-white text-xl">✕</button>
-    </div>
-
-    <nav class="flex-1 py-3">
-        <a href="#" onclick="showSection('dashboard');closeSidebar()" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
-            <span class="text-lg">📊</span><span>Dashboard</span>
-        </a>
-        <a href="#" onclick="showSection('books');closeSidebar()" id="nav-books" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
-            <span class="text-lg">📖</span><span>Kelola Buku</span>
-        </a>
-        <a href="#" onclick="showSection('members');closeSidebar()" id="nav-members" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
-            <span class="text-lg">👥</span><span>Anggota</span>
-        </a>
-        <a href="#" onclick="showSection('users');closeSidebar()" id="nav-users" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
-            <span class="text-lg">👤</span><span>Kelola User</span>
-        </a>
-        <a href="sirkulasi.html" class="nav-item flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all text-sm">
-            <span class="text-lg">🔄</span><span>Sirkulasi →</span>
-        </a>
-    </nav>
-
-    <div class="p-4 border-t border-blue-400/30">
-        <div class="flex items-center gap-3 mb-3">
-            <div class="w-9 h-9 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold text-sm">👤</div>
-            <div class="flex-1 min-w-0">
-                <p class="font-semibold text-sm truncate" id="user-name">Memuat...</p>
-                <p class="text-xs text-blue-200" id="user-role"></p>
-            </div>
-        </div>
-        <button onclick="logoutPustakawan()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-semibold">
-            🚪 Logout
-        </button>
-    </div>
-</aside>
-
-<!-- Main Content -->
-<div id="main-content" class="md:ml-64 min-h-screen flex flex-col">
-
-    <!-- Top Header -->
-    <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-        <div class="flex items-center gap-3">
-            <button id="hamburger" onclick="openSidebar()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
-            <div>
-                <h2 class="text-lg font-bold text-gray-800" id="page-title">Dashboard</h2>
-                <p class="text-xs text-gray-500" id="current-date"></p>
-            </div>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="exportToExcel()" class="hidden sm:flex bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg items-center gap-1 text-sm">
-                <span>📊</span><span class="hidden md:inline">Export</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- Page Content -->
-    <main class="flex-1 p-4 md:p-6">
-
-        <!-- SECTION: Dashboard -->
-        <section id="section-dashboard" class="space-y-5">
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
-                <div class="bg-white rounded-xl p-4 shadow-sm">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-xl">📚</div>
-                        <span class="text-blue-500 text-xs font-semibold">Total</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800" id="stat-total-books">0</p>
-                    <p class="text-gray-500 text-xs mt-1">Jumlah Buku</p>
-                </div>
-                <div class="bg-white rounded-xl p-4 shadow-sm">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-xl">✅</div>
-                        <span class="text-green-500 text-xs font-semibold">Tersedia</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800" id="stat-available">0</p>
-                    <p class="text-gray-500 text-xs mt-1">Buku Tersedia</p>
-                </div>
-                <div class="bg-white rounded-xl p-4 shadow-sm">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-xl">📤</div>
-                        <span class="text-orange-500 text-xs font-semibold">Dipinjam</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800" id="stat-borrowed">0</p>
-                    <p class="text-gray-500 text-xs mt-1">Sedang Dipinjam</p>
-                </div>
-                <div class="bg-white rounded-xl p-4 shadow-sm">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-xl">👥</div>
-                        <span class="text-purple-500 text-xs font-semibold">Aktif</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800" id="stat-members">0</p>
-                    <p class="text-gray-500 text-xs mt-1">Anggota</p>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="bg-white rounded-xl p-4 shadow-sm">
-                <h3 class="font-bold text-base mb-3 text-gray-800">⚡ Aksi Cepat</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <a href="sirkulasi.html" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg text-center block transition-all">
-                        <div class="text-xl mb-1">📤</div>
-                        <div class="font-semibold text-xs">Pinjamkan</div>
-                    </a>
-                    <a href="sirkulasi.html?tab=kembali" class="bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg text-center block transition-all">
-                        <div class="text-xl mb-1">📥</div>
-                        <div class="font-semibold text-xs">Terima Kembali</div>
-                    </a>
-                    <button onclick="openModal('add-book')" class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg text-center transition-all">
-                        <div class="text-xl mb-1">➕</div>
-                        <div class="font-semibold text-xs">Tambah Buku</div>
-                    </button>
-                    <button onclick="openModal('add-member')" class="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-lg text-center transition-all">
-                        <div class="text-xl mb-1">👤</div>
-                        <div class="font-semibold text-xs">Tambah Anggota</div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Import buttons (mobile friendly) -->
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="showImportModal('books')" class="bg-white border border-purple-200 text-purple-700 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-purple-50">
-                    <span>📥</span><span>Import Buku</span>
-                </button>
-                <button onclick="showImportModal('members')" class="bg-white border border-orange-200 text-orange-700 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold hover:bg-orange-50">
-                    <span>📥</span><span>Import Anggota</span>
-                </button>
-            </div>
-
-            <!-- Recent Loans -->
-            <div class="bg-white rounded-xl p-4 shadow-sm">
-                <h3 class="font-bold text-base mb-3 text-gray-800">🕐 Peminjaman Terbaru</h3>
-                <div id="recent-loans" class="space-y-3 max-h-64 overflow-y-auto">
-                    <p class="text-gray-500 text-center py-4 text-sm">Memuat...</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: Books -->
-        <section id="section-books" class="hidden space-y-4">
-            <div class="bg-white rounded-xl p-4 shadow-sm">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <h3 class="font-bold text-base">📖 Daftar Buku</h3>
-                    <div class="flex gap-2">
-                        <button onclick="printAllLabels()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs flex items-center gap-1">
-                            <span>🖨️</span><span class="hidden sm:inline">Cetak QR</span>
-                        </button>
-                        <button onclick="openModal('add-book')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs flex items-center gap-1">
-                            <span>➕</span><span>Tambah</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-2 mb-4">
-                    <input type="text" id="book-search" placeholder="Cari judul, pengarang, kode..."
-                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        onkeyup="searchBooks()">
-                    <select id="book-filter" onchange="searchBooks()" class="px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm">
-                        <option value="">Semua Kategori</option>
-                        <option value="000">Umum (000)</option>
-                        <option value="200">Agama (200)</option>
-                        <option value="400">Bahasa (400)</option>
-                        <option value="500">IPA/Mat (500)</option>
-                        <option value="700">Seni/OR (700)</option>
-                        <option value="800">Sastra (800)</option>
-                        <option value="900">Sejarah (900)</option>
-                        <option value="F">Fiksi (F)</option>
-                    </select>
-                </div>
-                <div class="overflow-x-auto -mx-4 px-4">
-                    <table class="w-full text-left text-sm min-w-[500px]">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Kode</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Judul</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600 hidden sm:table-cell">Pengarang</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Status</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="books-table-body" class="divide-y divide-gray-100">
-                            <tr><td colspan="5" class="px-3 py-8 text-center text-gray-500 text-sm">Memuat data buku...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: Members -->
-        <section id="section-members" class="hidden space-y-4">
-            <div class="bg-white rounded-xl p-4 shadow-sm">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <h3 class="font-bold text-base">👥 Daftar Anggota</h3>
-                    <button onclick="openModal('add-member')" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg text-xs flex items-center gap-1">
-                        <span>➕</span><span>Tambah</span>
-                    </button>
-                </div>
-                <input type="text" id="member-search" placeholder="Cari NIS atau nama..."
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm mb-4"
-                    onkeyup="searchMembers()">
-                <div class="overflow-x-auto -mx-4 px-4">
-                    <table class="w-full text-left text-sm min-w-[400px]">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">NIS</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Nama</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600 hidden sm:table-cell">Kelas</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Status</th>
-                                <th class="px-3 py-2 text-xs font-semibold text-gray-600">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="members-table-body" class="divide-y divide-gray-100">
-                            <tr><td colspan="5" class="px-3 py-8 text-center text-gray-500 text-sm">Memuat data anggota...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: Kelola User -->
-        <section id="section-users" class="hidden space-y-4">
-
-            <!-- Info banner -->
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-                <p class="font-semibold mb-1">ℹ️ Tentang Kelola User</p>
-                <p>Data user disimpan di Google Sheets dan langsung aktif di semua perangkat. Perubahan tidak perlu sync manual.</p>
-            </div>
-
-            <!-- Daftar user -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-4 border-b border-gray-100 flex justify-between items-center flex-wrap gap-2">
-                    <h3 class="font-bold text-base">👤 Daftar User Login</h3>
-                    <button onclick="document.getElementById('form-add-user').classList.toggle('hidden')"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1">
-                        <span>➕</span><span>Tambah User</span>
-                    </button>
-                </div>
-
-                <!-- Form tambah (collapsible) -->
-                <div id="form-add-user" class="hidden border-b border-gray-100 p-4 bg-blue-50">
-                    <h4 class="font-semibold text-sm text-blue-800 mb-3">➕ Data User Baru</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Nama Lengkap *</label>
-                            <input type="text" id="new-user-nama" placeholder="Nama Lengkap"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Email *</label>
-                            <input type="email" id="new-user-email" placeholder="email@sekolah.com"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Role *</label>
-                            <select id="new-user-role" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                <option value="pustakawan">Pustakawan</option>
-                                <option value="admin">Admin</option>
-                                <option value="guru">Guru</option>
-                                <option value="siswa">Siswa</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">PIN (6 digit) *</label>
-                            <input type="tel" id="new-user-pin" placeholder="123456" maxlength="6" pattern="\d{6}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none tracking-widest text-center">
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="saveNewUser()"
-                            class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm">Simpan</button>
-                        <button onclick="document.getElementById('form-add-user').classList.add('hidden')"
-                            class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
-                    </div>
-                </div>
-
-                <!-- User cards (mobile) / table (desktop) -->
-                <div id="users-table-body" class="divide-y divide-gray-100">
-                    <div class="px-4 py-8 text-center text-gray-400 text-sm">Memuat dari Google Sheets...</div>
-                </div>
-            </div>
-        </section>
-
-    </main>
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat dashboard…</p>
 </div>
 
-<!-- Bottom navigation (mobile only) -->
-<nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
-    <div class="flex">
-        <button onclick="showSection('dashboard')" id="bnav-dashboard" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-blue-600">
-            <span class="text-xl">📊</span><span class="text-xs font-medium">Beranda</span>
-        </button>
-        <button onclick="showSection('books')" id="bnav-books" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
-            <span class="text-xl">📖</span><span class="text-xs">Buku</span>
-        </button>
-        <button onclick="showSection('members')" id="bnav-members" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
-            <span class="text-xl">👥</span><span class="text-xs">Anggota</span>
-        </button>
-        <button onclick="showSection('users')" id="bnav-users" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
-            <span class="text-xl">👤</span><span class="text-xs">User</span>
-        </button>
-        <a href="sirkulasi.html" class="flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400">
-            <span class="text-xl">🔄</span><span class="text-xs">Sirkulasi</span>
-        </a>
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ── TOPBAR ─────────────────────────────────────── -->
+<header class="topbar">
+  <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+  <a class="topbar-logo" href="../../index.html">
+    <img src="../../assets/logo.jpeg" alt="Logo SDM01">
+    <div>
+      <div class="brand-name">SDM01 Kukusan</div>
+      <div class="brand-sub">Perpustakaan Digital</div>
     </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title" id="page-title">Dashboard</div>
+  <div class="topbar-right">
+    <div class="user-avatar" id="user-avatar">P</div>
+    <div class="user-info">
+      <div class="user-name" id="user-name">Memuat…</div>
+      <div class="user-role" id="user-role">pustakawan</div>
+    </div>
+    <button class="btn-logout" onclick="logoutPustakawan()">⎋ Keluar</button>
+  </div>
+</header>
+
+<!-- ── SIDEBAR ────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-label">Utama</div>
+  <a class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard');closeSidebar()">
+    <span class="nav-icon">🏠</span> Dashboard
+  </a>
+
+  <div class="sidebar-label">Perpustakaan</div>
+  <a class="nav-item" id="nav-books" onclick="showSection('books');closeSidebar()">
+    <span class="nav-icon">📚</span> Koleksi Buku
+  </a>
+  <a class="nav-item" id="nav-members" onclick="showSection('members');closeSidebar()">
+    <span class="nav-icon">👥</span> Anggota
+  </a>
+  <a class="nav-item" href="sirkulasi.html">
+    <span class="nav-icon">🔄</span> Sirkulasi
+  </a>
+
+  <div class="sidebar-label">Sistem</div>
+  <a class="nav-item" id="nav-users" onclick="showSection('users');closeSidebar()">
+    <span class="nav-icon">⚙️</span> Kelola User
+  </a>
+  <a class="nav-item" onclick="exportToExcel()">
+    <span class="nav-icon">💾</span> Export Backup
+  </a>
 </nav>
 
-<!-- Padding bottom untuk bottom nav di mobile -->
-<div class="h-16 md:hidden"></div>
+<!-- ── MAIN ───────────────────────────────────────── -->
+<main class="main">
 
-
-    <!-- Modal Edit User -->
-    <div id="modal-edit-user" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl w-full max-w-sm shadow-2xl">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="font-bold text-base">✏️ Edit User</h3>
-                <button onclick="closeModalUser()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-            </div>
-            <div class="p-4 space-y-3">
-                <input type="hidden" id="edit-user-original-email">
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                    <input type="text" id="edit-user-nama"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="edit-user-email"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">Role</label>
-                    <select id="edit-user-role" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none">
-                        <option value="superadmin">Superadmin</option>
-                        <option value="admin">Admin</option>
-                        <option value="pustakawan">Pustakawan</option>
-                        <option value="guru">Guru</option>
-                        <option value="siswa">Siswa</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">PIN Baru <span class="text-gray-400">(kosongkan jika tidak diubah)</span></label>
-                    <input type="tel" id="edit-user-pin" placeholder="6 digit angka" maxlength="6" pattern="\d{6}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest">
-                </div>
-                <div class="flex items-center gap-3">
-                    <label class="text-xs font-medium text-gray-700">Status Akun</label>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="edit-user-active" class="sr-only peer">
-                        <div class="w-10 h-5 bg-gray-300 peer-checked:bg-green-500 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
-                    </label>
-                    <span id="edit-user-active-label" class="text-xs text-gray-500">Aktif</span>
-                </div>
-            </div>
-            <div class="p-4 border-t flex gap-2">
-                <button onclick="saveUserEdit()"
-                    class="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm">
-                    💾 Simpan
-                </button>
-                <button onclick="deleteUser(document.getElementById('edit-user-original-email').value)"
-                    class="py-2 px-4 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-semibold text-sm">
-                    🗑️
-                </button>
-                <button onclick="closeModalUser()"
-                    class="py-2 px-4 bg-gray-100 text-gray-600 rounded-lg text-sm">
-                    Batal
-                </button>
-            </div>
-        </div>
+  <!-- ▸ DASHBOARD ─────────────────────────────────── -->
+  <section id="section-dashboard">
+    <div class="page-header animate-up">
+      <h1>Dashboard Pustakawan</h1>
+      <p>Selamat datang. Pantau aktivitas perpustakaan dari sini.</p>
+      <div class="page-meta" id="current-date">📅 —</div>
     </div>
 
-                <div class="flex gap-4 mb-4">
-                    <input type="text" id="book-search" placeholder="Cari judul, pengarang, atau kode..." 
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        onkeyup="searchBooks()">
-                    <select id="book-filter" onchange="searchBooks()" class="px-4 py-2 border border-gray-300 rounded-lg outline-none">
-                        <option value="">Semua Kategori</option>
-                        <option value="000">Umum (000)</option>
-                        <option value="200">Agama (200)</option>
-                        <option value="400">Bahasa (400)</option>
-                        <option value="500">IPA/Matematika (500)</option>
-                        <option value="700">Seni/Olahraga (700)</option>
-                        <option value="800">Sastra (800)</option>
-                        <option value="900">Sejarah (900)</option>
-                        <option value="F">Fiksi (F)</option>
-                    </select>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Kode</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Judul</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Pengarang</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Kategori</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="books-table-body" class="divide-y divide-gray-100">
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Memuat data buku...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION: Members -->
-        <section id="section-members" class="hidden space-y-6">
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-bold text-lg">👥 Daftar Anggota</h3>
-                    <button onclick="openModal('add-member')" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span>➕</span><span>Tambah Anggota</span>
-                    </button>
-                </div>
-
-                <div class="flex gap-4 mb-4">
-                    <input type="text" id="member-search" placeholder="Cari NIS atau nama..." 
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                        onkeyup="searchMembers()">
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">NIS</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Nama</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Kelas</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-gray-600">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="members-table-body" class="divide-y divide-gray-100">
-                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Memuat data anggota...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-    <div id="modal-add-book" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">➕ Tambah Buku Baru</h3>
-                <button onclick="closeModal('add-book')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-            </div>
-            
-            <form onsubmit="saveBook(event)" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Judul Buku *</label>
-                    <input type="text" name="judul" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Pengarang *</label>
-                        <input type="text" name="pengarang" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Penerbit *</label>
-                        <input type="text" name="penerbit" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tahun Terbit *</label>
-                        <input type="number" name="tahun_terbit" min="1900" max="2099" value="2024" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategori DDC *</label>
-                        <select name="kategori_ddc" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="000">000 - Umum</option>
-                            <option value="200">200 - Agama</option>
-                            <option value="400">400 - Bahasa</option>
-                            <option value="500">500 - IPA/Matematika</option>
-                            <option value="700">700 - Seni/Olahraga</option>
-                            <option value="800">800 - Sastra</option>
-                            <option value="900">900 - Sejarah</option>
-                            <option value="F">F - Fiksi</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Lokasi Rak *</label>
-                    <input type="text" name="lokasi_rak" placeholder="Contoh: Rak A-3" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">ISBN (opsional)</label>
-                    <input type="text" name="isbn" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-
-                <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="closeModal('add-book')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
-                    <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Simpan Buku</button>
-                </div>
-            </form>
-        </div>
+    <!-- Stats -->
+    <div class="stats-grid animate-up-d1">
+      <div class="stat-card">
+        <div class="stat-label">Total Koleksi</div>
+        <div class="stat-value" id="stat-total-books">—</div>
+        <div class="stat-sub">judul buku</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-label">Tersedia</div>
+        <div class="stat-value" id="stat-available">—</div>
+        <div class="stat-sub">siap dipinjam</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Dipinjam</div>
+        <div class="stat-value" id="stat-borrowed">—</div>
+        <div class="stat-sub">sedang keluar</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Total Anggota</div>
+        <div class="stat-value" id="stat-members">—</div>
+        <div class="stat-sub">siswa & guru</div>
+      </div>
     </div>
 
-    <!-- Modal: Add Member -->
-    <div id="modal-add-member" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">➕ Tambah Anggota Baru</h3>
-                <button onclick="closeModal('add-member')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-            </div>
-            
-            <form onsubmit="saveMember(event)" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">NIS *</label>
-                        <input type="text" name="nis" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kelas *</label>
-                        <select name="kelas" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
-                            <option value="1A">1A</option>
-                            <option value="1B">1B</option>
-                            <option value="2A">2A</option>
-                            <option value="2B">2B</option>
-                            <option value="3A">3A</option>
-                            <option value="3B">3B</option>
-                            <option value="4A">4A</option>
-                            <option value="4B">4B</option>
-                            <option value="5A">5A</option>
-                            <option value="5B">5B</option>
-                            <option value="6A">6A</option>
-                            <option value="6B">6B</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
-                    <input type="text" name="nama_lengkap" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">No. HP (opsional)</label>
-                        <input type="tel" name="no_hp" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Ortu (opsional)</label>
-                        <input type="email" name="email_ortu" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none">
-                    </div>
-                </div>
-
-                <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="closeModal('add-member')" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
-                    <button type="submit" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">Simpan Anggota</button>
-                </div>
-            </form>
+    <!-- Quick actions & Recent loans -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="animate-up-d2">
+      <!-- Quick actions -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚡ Aksi Cepat</span></div>
+        <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+          <a href="sirkulasi.html" class="btn btn-primary btn-full">🔄 Buka Sirkulasi</a>
+          <button class="btn btn-secondary btn-full" onclick="showSection('books');openModal('add-book')">📚 Tambah Buku</button>
+          <button class="btn btn-secondary btn-full" onclick="showSection('members');openModal('add-member')">👤 Tambah Anggota</button>
+          <button class="btn btn-gold btn-full" onclick="exportToExcel()">💾 Export Backup</button>
         </div>
+      </div>
+
+      <!-- Recent loans -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔄 Peminjaman Aktif</span>
+          <a href="sirkulasi.html" style="font-size:12px;color:var(--green-mid);text-decoration:none;font-weight:600">Lihat semua →</a>
+        </div>
+        <div id="recent-loans">
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div class="empty-title">Tidak ada peminjaman aktif</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▸ KOLEKSI BUKU ───────────────────────────────── -->
+  <section id="section-books" class="section-hidden">
+    <div class="page-header animate-up">
+      <h1>Koleksi Buku</h1>
+      <p>Kelola seluruh koleksi buku perpustakaan.</p>
     </div>
 
-    <!-- Modal: Import Data -->
-    <div id="modal-import" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg" id="import-title">📥 Import Data</h3>
-                <button onclick="closeModal('import')" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-            </div>
-        
-            <div class="space-y-4">
-                <!-- Download Template -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 class="font-semibold text-blue-800 mb-2">📋 Langkah 1: Download Template</h4>
-                    <p class="text-sm text-blue-700 mb-3">Download file template, isi dengan data Anda, lalu upload.</p>
-                    <button onclick="downloadTemplate()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm" id="btn-download-template">
-                        ⬇️ Download Template Excel
-                    </button>
-                </div>
-
-                <!-- Upload File -->
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 class="font-semibold text-green-800 mb-2">📤 Langkah 2: Upload File</h4>
-                    <p class="text-sm text-green-700 mb-3">Format yang didukung: .xlsx, .xls, .csv</p>
-                
-                    <div class="border-2 border-dashed border-green-300 rounded-lg p-6 text-center">
-                        <input type="file" id="import-file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileSelect(this)">
-                        <label for="import-file" class="cursor-pointer">
-                            <div class="text-4xl mb-2">📁</div>
-                            <p class="text-green-700 font-medium">Klik untuk pilih file</p>
-                            <p class="text-sm text-green-600" id="file-name">atau drag & drop di sini</p>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Preview & Import -->
-                <div id="import-preview" class="hidden">
-                    <h4 class="font-semibold text-gray-800 mb-2">👁️ Preview Data</h4>
-                    <div class="bg-gray-50 rounded-lg p-3 max-h-48 overflow-y-auto">
-                        <table class="w-full text-sm" id="preview-table">
-                            <!-- Preview content -->
-                        </table>
-                    </div>
-                    <div class="flex justify-between items-center mt-3">
-                        <span class="text-sm text-gray-600" id="import-stats"></span>
-                        <button onclick="processImport()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold">
-                            ✅ Proses Import
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Progress -->
-                <div id="import-progress" class="hidden">
-                    <div class="flex justify-between text-sm mb-1">
-                        <span>Mengimport...</span>
-                        <span id="progress-text">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div id="progress-bar" class="bg-green-600 h-2 rounded-full transition-all" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <!-- Results -->
-                <div id="import-results" class="hidden">
-                    <h4 class="font-semibold text-gray-800 mb-2">📊 Hasil Import</h4>
-                    <div class="space-y-2" id="results-content"></div>
-                </div>
-            </div>
+    <div class="card animate-up-d1">
+      <div class="card-header">
+        <span class="card-title">📚 Daftar Buku</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-import-books').classList.remove('hidden')">📥 Import</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('add-book')">+ Tambah Buku</button>
         </div>
+      </div>
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+        <input type="text" id="book-search" class="form-input" style="flex:1;min-width:160px;margin-bottom:0" placeholder="Cari judul, pengarang, atau kode…" oninput="searchBooks()">
+        <select id="book-filter" class="form-select" style="width:160px;margin-bottom:0" onchange="searchBooks()">
+          <option value="">Semua Kategori</option>
+          <option value="000">000 – Karya Umum</option>
+          <option value="100">100 – Filsafat</option>
+          <option value="200">200 – Agama</option>
+          <option value="300">300 – Ilmu Sosial</option>
+          <option value="400">400 – Bahasa</option>
+          <option value="500">500 – Sains</option>
+          <option value="600">600 – Teknologi</option>
+          <option value="700">700 – Seni</option>
+          <option value="800">800 – Sastra</option>
+          <option value="900">900 – Sejarah & Geografi</option>
+          <option value="F">F – Fiksi / Cerita</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Kode Aksesi</th>
+              <th>Judul</th>
+              <th>Pengarang</th>
+              <th>Kategori DDC</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="books-table-body">
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-muted)">Memuat data…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-        
-    <!-- Scripts -->
+  </section>
 
-    <script src="../core/db.js"></script>
-    <script src="../core/sheets-config.js"></script>
-    <script src="../core/drive-config.js"></script>
-    <script src="../core/auth.js"></script>
-    <script>
+  <!-- ▸ ANGGOTA ────────────────────────────────────── -->
+  <section id="section-members" class="section-hidden">
+    <div class="page-header animate-up">
+      <h1>Data Anggota</h1>
+      <p>Kelola siswa dan guru sebagai anggota perpustakaan.</p>
+    </div>
+
+    <div class="card animate-up-d1">
+      <div class="card-header">
+        <span class="card-title">👥 Daftar Anggota</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-import-members').classList.remove('hidden')">📥 Import</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('add-member')">+ Tambah Anggota</button>
+        </div>
+      </div>
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <input type="text" id="member-search" class="form-input" style="margin-bottom:0" placeholder="Cari NIS atau nama anggota…" oninput="searchMembers()">
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>NIS</th>
+              <th>Nama Lengkap</th>
+              <th>Kelas</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="members-table-body">
+            <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-muted)">Memuat data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ▸ KELOLA USER ────────────────────────────────── -->
+  <section id="section-users" class="section-hidden">
+    <div class="page-header animate-up">
+      <h1>Kelola User</h1>
+      <p>Data user disimpan di Google Sheets dan langsung aktif di semua perangkat.</p>
+    </div>
+
+    <div class="card animate-up-d1">
+      <div class="card-header">
+        <span class="card-title">👤 Daftar User</span>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('form-add-user').classList.toggle('hidden')">+ Tambah User</button>
+      </div>
+
+      <!-- Form tambah user -->
+      <div id="form-add-user" class="hidden" style="padding:16px;border-bottom:1px solid var(--border);background:var(--green-ghost)">
+        <p style="font-size:12px;font-weight:700;color:var(--green-dark);margin-bottom:12px">Tambah User Baru</p>
+        <div class="form-row">
+          <div>
+            <label class="form-label">Nama Lengkap</label>
+            <input type="text" id="new-user-nama" class="form-input" placeholder="Nama Lengkap">
+          </div>
+          <div>
+            <label class="form-label">Email</label>
+            <input type="email" id="new-user-email" class="form-input" placeholder="email@sekolah.com">
+          </div>
+          <div>
+            <label class="form-label">Role</label>
+            <select id="new-user-role" class="form-select">
+              <option value="pustakawan">Pustakawan</option>
+              <option value="admin">Admin</option>
+              <option value="guru">Guru</option>
+              <option value="siswa">Siswa</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">PIN (6 digit)</label>
+            <input type="tel" id="new-user-pin" class="form-input" placeholder="123456" maxlength="6" pattern="\d{6}">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary btn-sm" onclick="saveNewUser()">Simpan User</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('form-add-user').classList.add('hidden')">Batal</button>
+        </div>
+      </div>
+
+      <div id="users-table-body" style="divide-y:1px solid var(--border)">
+        <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Memuat data user…</div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ── BOTTOM NAV (mobile) ────────────────────────── -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bnav-item active" id="bnav-dashboard" onclick="showSection('dashboard')">
+    <span class="bnav-icon">🏠</span> Dashboard
+  </button>
+  <button class="bnav-item" id="bnav-books" onclick="showSection('books')">
+    <span class="bnav-icon">📚</span> Buku
+  </button>
+  <a class="bnav-item" href="sirkulasi.html">
+    <span class="bnav-icon">🔄</span> Sirkulasi
+  </a>
+  <button class="bnav-item" id="bnav-members" onclick="showSection('members')">
+    <span class="bnav-icon">👥</span> Anggota
+  </button>
+  <button class="bnav-item" id="bnav-users" onclick="showSection('users')">
+    <span class="bnav-icon">⚙️</span> User
+  </button>
+</nav>
+
+<!-- ── MODAL: TAMBAH BUKU ─────────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-add-book">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📚 Tambah Buku Baru</div>
+      <button class="modal-close" onclick="closeModal('add-book')">✕</button>
+    </div>
+    <form class="modal-body" onsubmit="saveBook(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Judul Buku *</label>
+          <input name="judul" type="text" class="form-input" required placeholder="Judul lengkap buku">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pengarang *</label>
+          <input name="pengarang" type="text" class="form-input" required placeholder="Nama pengarang">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penerbit</label>
+          <input name="penerbit" type="text" class="form-input" placeholder="Nama penerbit">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tahun Terbit</label>
+          <input name="tahun_terbit" type="number" class="form-input" placeholder="2024" min="1900" max="2099">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori DDC</label>
+          <select name="kategori_ddc" class="form-select">
+            <option value="000">000 – Karya Umum</option>
+            <option value="100">100 – Filsafat</option>
+            <option value="200">200 – Agama</option>
+            <option value="300">300 – Ilmu Sosial</option>
+            <option value="400">400 – Bahasa</option>
+            <option value="500" selected>500 – Sains</option>
+            <option value="600">600 – Teknologi</option>
+            <option value="700">700 – Seni</option>
+            <option value="800">800 – Sastra</option>
+            <option value="900">900 – Sejarah</option>
+            <option value="F">F – Fiksi / Cerita</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lokasi Rak</label>
+          <input name="lokasi_rak" type="text" class="form-input" placeholder="mis. Rak A-1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ISBN</label>
+          <input name="isbn" type="text" class="form-input" placeholder="ISBN (opsional)">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('add-book')">Batal</button>
+        <button type="submit" class="btn btn-primary">💾 Simpan Buku</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── MODAL: TAMBAH ANGGOTA ──────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-add-member">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👤 Tambah Anggota Baru</div>
+      <button class="modal-close" onclick="closeModal('add-member')">✕</button>
+    </div>
+    <form class="modal-body" onsubmit="saveMember(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">NIS *</label>
+          <input name="nis" type="text" class="form-input" required placeholder="Nomor Induk Siswa">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap *</label>
+          <input name="nama_lengkap" type="text" class="form-input" required placeholder="Nama lengkap">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kelas</label>
+          <input name="kelas" type="text" class="form-input" placeholder="mis. 4A, 5B">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. HP Orang Tua</label>
+          <input name="no_hp" type="tel" class="form-input" placeholder="08xx-xxxx-xxxx">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Email Orang Tua</label>
+          <input name="email_ortu" type="email" class="form-input" placeholder="email@gmail.com (opsional)">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('add-member')">Batal</button>
+        <button type="submit" class="btn btn-primary">💾 Simpan Anggota</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── MODAL: EDIT USER ───────────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-edit-user">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Edit User</div>
+      <button class="modal-close" onclick="closeModalUser()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-original-email">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" id="edit-user-nama" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="edit-user-email" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select id="edit-user-role" class="form-select">
+            <option value="superadmin">Superadmin</option>
+            <option value="admin">Admin</option>
+            <option value="pustakawan">Pustakawan</option>
+            <option value="guru">Guru</option>
+            <option value="siswa">Siswa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">PIN Baru (kosongkan bila tidak diubah)</label>
+          <input type="tel" id="edit-user-pin" class="form-input" placeholder="6 digit angka" maxlength="6" pattern="\d{6}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status Akun</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
+            <input type="checkbox" id="edit-user-active" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.3s" id="toggle-track"></span>
+          </label>
+          <span id="edit-user-active-label" style="font-size:13px;color:var(--ink-mid)">Aktif</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteUser(document.getElementById('edit-user-original-email').value)">🗑 Hapus</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeModalUser()">Batal</button>
+      <button class="btn btn-primary" onclick="saveUserEdit()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: IMPORT BUKU ─────────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-import-books">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📥 Import Data Buku</div>
+      <button class="modal-close" onclick="document.getElementById('modal-import-books').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert info">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <div class="alert-title">Format File Excel/CSV</div>
+          <div class="alert-text">Kolom yang diperlukan: <strong>judul, pengarang, penerbit, tahun_terbit, kategori_ddc, lokasi_rak, isbn</strong></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pilih File Excel (.xlsx) atau CSV (.csv)</label>
+        <input type="file" id="import-books-file" accept=".xlsx,.csv" class="form-input" onchange="previewImport('books')">
+      </div>
+      <div id="import-books-preview" class="import-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-import-books').classList.add('hidden')">Batal</button>
+      <button class="btn btn-primary" onclick="executeImport('books')">📥 Import Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: IMPORT ANGGOTA ─────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-import-members">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📥 Import Data Anggota</div>
+      <button class="modal-close" onclick="document.getElementById('modal-import-members').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert info">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <div class="alert-title">Format File</div>
+          <div class="alert-text">Kolom yang diperlukan: <strong>nis, nama_lengkap, kelas, no_hp, email_ortu</strong></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pilih File Excel (.xlsx) atau CSV (.csv)</label>
+        <input type="file" id="import-members-file" accept=".xlsx,.csv" class="form-input" onchange="previewImport('members')">
+      </div>
+      <div id="import-members-preview" class="import-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-import-members').classList.add('hidden')">Batal</button>
+      <button class="btn btn-primary" onclick="executeImport('members')">📥 Import Data</button>
+    </div>
+  </div>
+</div>
+
+<script src="../core/db.js"></script>
+<script src="../core/sheets-config.js"></script>
+<script src="../core/drive-config.js"></script>
+<script src="../core/auth.js"></script>
+<script>
         // State
         const AppState = {
             currentUser: null,
@@ -721,11 +589,15 @@
 
             AppState.isReady = true;
 
-            document.getElementById('user-name').textContent = AppState.currentUser.nama || AppState.currentUser.email;
-            document.getElementById('user-role').textContent = AppState.currentUser.role;
+            const nama = AppState.currentUser.nama || AppState.currentUser.email;
+            document.getElementById('user-name').textContent  = nama;
+            document.getElementById('user-role').textContent  = AppState.currentUser.role;
+            document.getElementById('user-avatar').textContent = nama.charAt(0).toUpperCase();
             
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('current-date').textContent = new Date().toLocaleDateString('id-ID', options);
+            document.getElementById('current-date').textContent = '📅 ' + new Date().toLocaleDateString('id-ID', options);
+
+            document.getElementById('loadingOverlay').classList.add('hidden');
 
             await Promise.all([
                 loadDashboardStats(),
@@ -745,82 +617,79 @@
             });
         }
 
-        // Navigation
-        // ── SIDEBAR MOBILE ───────────────────────────────────────────────
+        // ── NAVIGATION ───────────────────────────────────
         function openSidebar() {
             document.getElementById('sidebar').classList.add('open');
-            document.getElementById('overlay').classList.remove('hidden');
+            document.getElementById('sidebarOverlay').classList.remove('hidden');
         }
         function closeSidebar() {
             document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('overlay').classList.add('hidden');
+            document.getElementById('sidebarOverlay').classList.add('hidden');
         }
 
-        // ── SHOW SECTION (update bottom nav juga) ───────────────────────
         function showSection(sectionName) {
-            ['dashboard','books','members','users'].forEach(s => {
-                document.getElementById('section-'+s).classList.add('hidden');
-                document.getElementById('nav-'+s).classList.remove('active');
-                const bn = document.getElementById('bnav-'+s);
-                if(bn){ bn.className='flex-1 py-3 flex flex-col items-center gap-0.5 text-gray-400'; }
+            const sections = ['dashboard','books','members','users'];
+            sections.forEach(s => {
+                const sec = document.getElementById('section-'+s);
+                const nav = document.getElementById('nav-'+s);
+                const bn  = document.getElementById('bnav-'+s);
+                if (sec) sec.classList.add('section-hidden');
+                if (nav) nav.classList.remove('active');
+                if (bn)  bn.className = 'bnav-item';
             });
-            document.getElementById('section-'+sectionName).classList.remove('hidden');
-            document.getElementById('nav-'+sectionName).classList.add('active');
-            const activeBn = document.getElementById('bnav-'+sectionName);
-            if(activeBn){ activeBn.className='flex-1 py-3 flex flex-col items-center gap-0.5 text-blue-600'; }
-            const titles = { dashboard:'Dashboard', books:'Kelola Buku', members:'Anggota', users:'Kelola User' };
+            const target = document.getElementById('section-'+sectionName);
+            if (target) target.classList.remove('section-hidden');
+            const navTarget = document.getElementById('nav-'+sectionName);
+            if (navTarget) navTarget.classList.add('active');
+            const bnTarget = document.getElementById('bnav-'+sectionName);
+            if (bnTarget) bnTarget.className = 'bnav-item active';
+
+            const titles = { dashboard:'Dashboard', books:'Koleksi Buku', members:'Anggota', users:'Kelola User' };
             document.getElementById('page-title').textContent = titles[sectionName] || sectionName;
+
             if(sectionName==='books')   loadBooks();
             if(sectionName==='members') loadMembers();
             if(sectionName==='users')   loadUsers();
         }
 
-        // ── KELOLA USER (Sheets) ─────────────────────────────────────────
+        // ── USERS (Sheets) ────────────────────────────────
         async function loadUsers() {
             const container = document.getElementById('users-table-body');
-            container.innerHTML = '<div class="px-4 py-8 text-center text-gray-400 text-sm">Memuat dari Google Sheets...</div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Memuat dari Google Sheets…</div></div>';
             try {
                 const users = await sheetsManager.fetchUsers();
                 if (users.length === 0) {
-                    container.innerHTML = '<div class="px-4 py-8 text-center text-gray-400 text-sm">Belum ada user di Google Sheets.</div>';
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Belum ada user di Google Sheets</div></div>';
                     return;
                 }
-                // Update IndexedDB lokal
                 await dbManager.db.users.clear();
                 await dbManager.db.users.bulkAdd(users);
 
-                // Render sebagai cards (mobile-friendly)
-                container.innerHTML = users.map(u => `
-                    <div class="p-4 flex items-center justify-between gap-3 hover:bg-gray-50">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0
-                                ${u.role==='superadmin'?'bg-purple-500':u.role==='admin'?'bg-blue-500':u.role==='pustakawan'?'bg-green-500':u.role==='guru'?'bg-orange-500':'bg-gray-400'}">
-                                ${u.nama.charAt(0).toUpperCase()}
-                            </div>
-                            <div class="min-w-0">
-                                <p class="font-semibold text-sm text-gray-800 truncate">${u.nama}</p>
-                                <p class="text-xs text-gray-500 truncate">${u.email}</p>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                                        ${u.role==='superadmin'?'bg-purple-100 text-purple-700':u.role==='admin'?'bg-blue-100 text-blue-700':u.role==='pustakawan'?'bg-green-100 text-green-700':u.role==='guru'?'bg-orange-100 text-orange-700':'bg-gray-100 text-gray-600'}">${u.role}</span>
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${u.is_active?'bg-green-100 text-green-700':'bg-red-100 text-red-600'}">
-                                        ${u.is_active?'Aktif':'Nonaktif'}
-                                    </span>
-                                    ${!u.pin?'<span class="text-xs text-red-400">⚠️ No PIN</span>':''}
-                                </div>
+                container.innerHTML = users.map(u => {
+                    const roleColors = { superadmin:'purple', admin:'blue', pustakawan:'green', guru:'gold', siswa:'gray' };
+                    const color = roleColors[u.role] || 'gray';
+                    return `
+                    <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)">
+                        <div style="width:38px;height:38px;border-radius:50%;background:var(--green-${color==='purple'?'mid':color==='gray'?'light':color==='gold'?'light':'light'});display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">
+                            ${u.nama.charAt(0).toUpperCase()}
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:13px;font-weight:600;color:var(--ink)">${u.nama}</div>
+                            <div style="font-size:11px;color:var(--ink-muted)">${u.email}</div>
+                            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+                                <span class="badge ${color}">${u.role}</span>
+                                <span class="badge ${u.is_active?'green':'red'}">${u.is_active?'Aktif':'Nonaktif'}</span>
+                                ${!u.pin?'<span class="badge red">⚠️ No PIN</span>':''}
                             </div>
                         </div>
-                        <button onclick="openEditUser('${u.email}')"
-                            class="flex-shrink-0 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs hover:bg-blue-50 hover:text-blue-600 font-semibold">
-                            ✏️ Edit
-                        </button>
-                    </div>`).join('');
+                        <button onclick="openEditUser('${u.email}')" class="btn btn-ghost btn-sm">✏️ Edit</button>
+                    </div>`;
+                }).join('');
             } catch (e) {
-                container.innerHTML = `<div class="px-4 py-8 text-center text-red-400 text-sm">Gagal memuat: ${e.message}</div>`;
+                container.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-title">Gagal memuat: ${e.message}</div></div>`;
             }
         }
 
-        // Buka modal edit user
         async function openEditUser(email) {
             try {
                 const users = await sheetsManager.fetchUsers();
@@ -832,23 +701,18 @@
                 document.getElementById('edit-user-email').value = u.email;
                 document.getElementById('edit-user-role').value  = u.role;
                 document.getElementById('edit-user-pin').value   = '';
-                document.getElementById('edit-user-active').checked = u.is_active;
+                const cb = document.getElementById('edit-user-active');
+                cb.checked = u.is_active;
                 document.getElementById('edit-user-active-label').textContent = u.is_active ? 'Aktif' : 'Nonaktif';
-                document.getElementById('edit-user-active').onchange = function() {
+                cb.onchange = function() {
                     document.getElementById('edit-user-active-label').textContent = this.checked ? 'Aktif' : 'Nonaktif';
                 };
 
-                const modal = document.getElementById('modal-edit-user');
-                modal.classList.remove('hidden');
-                modal.style.display = 'flex';
+                document.getElementById('modal-edit-user').classList.remove('hidden');
             } catch(e) { alert('Gagal: ' + e.message); }
         }
 
-        function closeModalUser() {
-            const modal = document.getElementById('modal-edit-user');
-            modal.classList.add('hidden');
-            modal.style.display = '';
-        }
+        function closeModalUser() { document.getElementById('modal-edit-user').classList.add('hidden'); }
 
         async function saveUserEdit() {
             const originalEmail = document.getElementById('edit-user-original-email').value;
@@ -863,22 +727,13 @@
 
             try {
                 await ensureSheetsWrite();
-
-                // Ambil semua user, update yang sesuai
                 const users = await sheetsManager.fetchUsers();
-                const idx   = users.findIndex(u => u.email === originalEmail);
+                const idx = users.findIndex(u => u.email === originalEmail);
                 if (idx === -1) { alert('User tidak ditemukan'); return; }
-
-                users[idx] = {
-                    ...users[idx],
-                    nama, email, role,
-                    is_active: active,
-                    ...(pin ? { pin } : {})
-                };
-
+                users[idx] = { ...users[idx], nama, email, role, is_active: active, ...(pin ? { pin } : {}) };
                 await sheetsManager.writeUsers(users);
                 closeModalUser();
-                alert('✅ User berhasil diperbarui.');
+                showToast('✅ User berhasil diperbarui', 'success');
                 loadUsers();
             } catch(e) { alert('Gagal simpan: ' + e.message); }
         }
@@ -886,17 +741,16 @@
         async function deleteUser(email) {
             if (!email) return;
             const users = await sheetsManager.fetchUsers().catch(() => []);
-            const u     = users.find(x => x.email === email);
+            const u = users.find(x => x.email === email);
             if (!u) return;
             if (!confirm(`Hapus user "${u.nama}" (${email})?\n\nTindakan ini tidak bisa dibatalkan.`)) return;
             if (u.role === 'superadmin') { alert('Superadmin tidak bisa dihapus.'); return; }
-
             try {
                 await ensureSheetsWrite();
                 const filtered = users.filter(x => x.email !== email);
                 await sheetsManager.writeUsers(filtered);
                 closeModalUser();
-                alert('✅ User berhasil dihapus.');
+                showToast('✅ User berhasil dihapus', 'success');
                 loadUsers();
             } catch(e) { alert('Gagal hapus: ' + e.message); }
         }
@@ -908,200 +762,148 @@
             const pin   = document.getElementById('new-user-pin').value.trim();
 
             if (!nama || !email || !pin) { alert('Semua field harus diisi.'); return; }
-            if (!/^\d{6}$/.test(pin))    { alert('PIN harus 6 digit angka.'); return; }
+            if (!/^\d{6}$/.test(pin))   { alert('PIN harus 6 digit angka.'); return; }
 
             try {
                 await ensureSheetsWrite();
                 const existing = await sheetsManager.fetchUsers();
                 if (existing.find(u => u.email === email)) { alert('Email sudah terdaftar.'); return; }
-                const newId   = existing.length > 0 ? Math.max(...existing.map(u=>u.id))+1 : 1;
+                const newId = existing.length > 0 ? Math.max(...existing.map(u => u.id)) + 1 : 1;
                 await sheetsManager.appendUser({ id: newId, email, nama, role, pin, is_active: true });
-                alert(`✅ User "${nama}" ditambahkan. Bisa login dari perangkat mana saja.`);
-                ['new-user-nama','new-user-email','new-user-pin'].forEach(id => document.getElementById(id).value='');
+                showToast(`✅ User "${nama}" berhasil ditambahkan`, 'success');
+                ['new-user-nama','new-user-email','new-user-pin'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('form-add-user').classList.add('hidden');
                 loadUsers();
             } catch(e) { alert('Gagal: ' + e.message); }
         }
 
-        // Token disimpan di sessionStorage — login Google hanya diminta
-        // SEKALI per sesi browser. Navigasi antar halaman tidak meminta ulang.
         async function ensureSheetsWrite() {
             if (sheetsManager.isConnected()) return;
-            const toast = showToast('🔑 Menghubungkan ke Google (sekali per sesi)...', 0);
-            try {
-                await sheetsManager.connect();
-            } catch (e) {
-                throw e;
-            } finally {
-                toast.remove();
-            }
+            const t = showToast('🔑 Menghubungkan ke Google…', null, 0);
+            try { await sheetsManager.connect(); }
+            finally { if(t) t.remove(); }
         }
 
-        async function syncUsersToDrive() {
-            alert('ℹ️ Data user langsung tersimpan di Google Sheets.\nTidak perlu sync manual.');
-        }
-
-        // ── TOAST NOTIFICATION ───────────────────────────────────────────
-        function showToast(msg, duration=3000) {
+        // ── TOAST ─────────────────────────────────────────
+        function showToast(msg, type='', duration=3000) {
             const el = document.createElement('div');
-            el.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-xl shadow-xl z-50 text-sm font-medium';
+            el.className = 'toast' + (type ? ' '+type : '');
             el.textContent = msg;
             document.body.appendChild(el);
             if (duration > 0) setTimeout(() => el.remove(), duration);
             return el;
         }
+
+        // ── STATS ─────────────────────────────────────────
         async function loadDashboardStats() {
             try {
                 const stats = await dbManager.getStatistics();
                 if (stats.success) {
-                    document.getElementById('stat-total-books').textContent = stats.data.total_books;
-                    document.getElementById('stat-available').textContent = stats.data.available_books;
-                    document.getElementById('stat-borrowed').textContent = stats.data.borrowed_books;
-                    document.getElementById('stat-members').textContent = stats.data.total_members;
+                    document.getElementById('stat-total-books').textContent  = stats.data.total_books;
+                    document.getElementById('stat-available').textContent    = stats.data.available_books;
+                    document.getElementById('stat-borrowed').textContent     = stats.data.borrowed_books;
+                    document.getElementById('stat-members').textContent      = stats.data.total_members;
                 }
-            } catch (error) {
-                console.error('Stats error:', error);
-            }
+            } catch (error) { console.error('Stats error:', error); }
         }
 
-        // Books
+        // ── BOOKS ─────────────────────────────────────────
         async function loadBooks() {
             try {
                 const result = await dbManager.getAllBooks();
                 AppState.allBooks = result.data || [];
                 renderBooksTable(AppState.allBooks);
-            } catch (error) {
-                console.error('Load books error:', error);
-            }
+            } catch (error) { console.error('Load books error:', error); }
         }
 
         function renderBooksTable(books) {
             const tbody = document.getElementById('books-table-body');
-            
             if (books.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Belum ada data buku. Klik "Tambah Buku" untuk mulai.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--ink-muted)">
+                    <div style="font-size:32px;margin-bottom:8px">📚</div>
+                    Belum ada koleksi buku. Klik "Tambah Buku" untuk mulai.
+                </td></tr>`;
                 return;
             }
-
             tbody.innerHTML = books.map(book => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${book.kode_aksesi}</td>
-                    <td class="px-4 py-3 text-sm text-gray-700">${book.judul}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${book.pengarang}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${book.kategori_ddc}</td>
-                    <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${getStatusClass(book.status)}">
-                            ${book.status}
-                        </span>
+                <tr>
+                    <td><code style="font-size:11.5px;background:var(--green-ghost);padding:2px 6px;border-radius:4px">${book.kode_aksesi}</code></td>
+                    <td><div style="font-weight:600;color:var(--ink)">${book.judul}</div><div style="font-size:11px;color:var(--ink-muted)">${book.penerbit||'—'} · ${book.tahun_terbit||'—'}</div></td>
+                    <td>${book.pengarang}</td>
+                    <td><span class="badge blue">${book.kategori_ddc}</span></td>
+                    <td><span class="badge ${getStatusBadge(book.status)}">${book.status}</span></td>
+                    <td style="white-space:nowrap">
+                        <button onclick="printBookQR(${book.id})" class="btn btn-ghost btn-sm" title="Cetak QR">🖨️</button>
+                        <button onclick="deleteBook(${book.id})" class="btn btn-ghost btn-sm" title="Hapus" style="margin-left:4px">🗑️</button>
                     </td>
-                    <td class="px-4 py-3">
-                        <button onclick="printBookQR(${book.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Cetak QR">🖨️</button>
-                        <button onclick="deleteBook(${book.id})" class="text-red-600 hover:text-red-800" title="Hapus">🗑️</button>
-                    </td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
 
-        function getStatusClass(status) {
-            const classes = {
-                'tersedia': 'bg-green-100 text-green-800',
-                'dipinjam': 'bg-orange-100 text-orange-800',
-                'rusak': 'bg-red-100 text-red-800',
-                'hilang': 'bg-gray-100 text-gray-800'
-            };
-            return classes[status] || 'bg-gray-100 text-gray-800';
+        function getStatusBadge(status) {
+            const map = { 'tersedia':'green', 'dipinjam':'orange', 'rusak':'red', 'hilang':'gray' };
+            return map[status] || 'gray';
         }
 
         function searchBooks() {
             const search = document.getElementById('book-search').value.toLowerCase();
             const filter = document.getElementById('book-filter').value;
-            
             let filtered = AppState.allBooks;
-            
-            if (search) {
-                filtered = filtered.filter(b => 
-                    b.judul.toLowerCase().includes(search) ||
-                    b.pengarang.toLowerCase().includes(search) ||
-                    b.kode_aksesi.toLowerCase().includes(search)
-                );
-            }
-            
-            if (filter) {
-                filtered = filtered.filter(b => b.kategori_ddc === filter);
-            }
-            
+            if (search) filtered = filtered.filter(b => b.judul.toLowerCase().includes(search) || b.pengarang.toLowerCase().includes(search) || b.kode_aksesi.toLowerCase().includes(search));
+            if (filter) filtered = filtered.filter(b => b.kategori_ddc === filter);
             renderBooksTable(filtered);
         }
 
-        // Members
+        // ── MEMBERS ───────────────────────────────────────
         async function loadMembers() {
             try {
                 const result = await dbManager.getAllMembers();
                 AppState.allMembers = result.data || [];
                 renderMembersTable(AppState.allMembers);
-            } catch (error) {
-                console.error('Load members error:', error);
-            }
+            } catch (error) { console.error('Load members error:', error); }
         }
 
         function renderMembersTable(members) {
             const tbody = document.getElementById('members-table-body');
-            
             if (members.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Belum ada data anggota. Klik "Tambah Anggota" untuk mulai.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--ink-muted)">
+                    <div style="font-size:32px;margin-bottom:8px">👥</div>
+                    Belum ada data anggota.
+                </td></tr>`;
                 return;
             }
-
             tbody.innerHTML = members.map(member => `
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${member.nis}</td>
-                    <td class="px-4 py-3 text-sm text-gray-700">${member.nama_lengkap}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${member.kelas}</td>
-                    <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${member.status === 'aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                            ${member.status || 'aktif'}
-                        </span>
+                <tr>
+                    <td><code style="font-size:11.5px">${member.nis}</code></td>
+                    <td style="font-weight:600;color:var(--ink)">${member.nama_lengkap}</td>
+                    <td>${member.kelas || '—'}</td>
+                    <td><span class="badge ${member.status === 'aktif' ? 'green' : 'red'}">${member.status || 'aktif'}</span></td>
+                    <td style="white-space:nowrap">
+                        <button onclick="printMemberCard(${member.id})" class="btn btn-ghost btn-sm" title="Cetak Kartu">🪪</button>
+                        <button onclick="deleteMember(${member.id})" class="btn btn-ghost btn-sm" title="Hapus" style="margin-left:4px">🗑️</button>
                     </td>
-                    <td class="px-4 py-3">
-                        <button onclick="printMemberCard(${member.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Cetak Kartu">🪪</button>
-                        <button onclick="deleteMember(${member.id})" class="text-red-600 hover:text-red-800" title="Hapus">🗑️</button>
-                    </td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
 
         function searchMembers() {
             const search = document.getElementById('member-search').value.toLowerCase();
-            
             let filtered = AppState.allMembers;
-            
-            if (search) {
-                filtered = filtered.filter(m => 
-                    m.nis.toLowerCase().includes(search) ||
-                    m.nama_lengkap.toLowerCase().includes(search)
-                );
-            }
-            
+            if (search) filtered = filtered.filter(m => m.nis.toLowerCase().includes(search) || m.nama_lengkap.toLowerCase().includes(search));
             renderMembersTable(filtered);
         }
 
-        // Modal
-        function openModal(modalName) {
-            document.getElementById('modal-' + modalName).classList.remove('hidden');
-            document.getElementById('modal-' + modalName).classList.add('flex');
+        // ── MODALS ────────────────────────────────────────
+        function openModal(name) {
+            document.getElementById('modal-'+name).classList.remove('hidden');
+        }
+        function closeModal(name) {
+            document.getElementById('modal-'+name).classList.add('hidden');
         }
 
-        function closeModal(modalName) {
-            document.getElementById('modal-' + modalName).classList.add('hidden');
-            document.getElementById('modal-' + modalName).classList.remove('flex');
-        }
-
-        // Save Book
+        // ── SAVE BOOK ─────────────────────────────────────
         async function saveBook(event) {
             event.preventDefault();
             const form = event.target;
             const formData = new FormData(form);
-            
             const bookData = {
                 judul: formData.get('judul'),
                 pengarang: formData.get('pengarang'),
@@ -1111,7 +913,6 @@
                 lokasi_rak: formData.get('lokasi_rak'),
                 isbn: formData.get('isbn') || null
             };
-
             try {
                 const result = await dbManager.addBook(bookData);
                 if (result.success) {
@@ -1119,21 +920,16 @@
                     form.reset();
                     await loadBooks();
                     await loadDashboardStats();
-                    alert('✅ Buku berhasil ditambahkan!');
-                } else {
-                    alert('❌ Gagal: ' + result.error);
-                }
-            } catch (error) {
-                alert('❌ Error: ' + error.message);
-            }
+                    showToast('✅ Buku berhasil ditambahkan!', 'success');
+                } else { alert('❌ Gagal: ' + result.error); }
+            } catch (error) { alert('❌ Error: ' + error.message); }
         }
 
-        // Save Member
+        // ── SAVE MEMBER ───────────────────────────────────
         async function saveMember(event) {
             event.preventDefault();
             const form = event.target;
             const formData = new FormData(form);
-            
             const memberData = {
                 nis: formData.get('nis'),
                 nama_lengkap: formData.get('nama_lengkap'),
@@ -1143,447 +939,204 @@
                 tipe_anggota: 'siswa',
                 status: 'aktif'
             };
-
             try {
-                // Cek NIS sudah ada
                 const existing = await dbManager.db.members.where('nis').equals(memberData.nis).first();
-                if (existing) {
-                    alert('NIS sudah terdaftar!');
-                    return;
-                }
-
+                if (existing) { alert('NIS sudah terdaftar!'); return; }
                 const result = await dbManager.addMember(memberData);
                 if (result.success) {
                     closeModal('add-member');
                     form.reset();
                     await loadMembers();
                     await loadDashboardStats();
-                    alert('✅ Anggota berhasil ditambahkan!');
-                } else {
-                    alert('❌ Gagal: ' + result.error);
-                }
-            } catch (error) {
-                alert('❌ Error: ' + error.message);
-            }
+                    showToast('✅ Anggota berhasil ditambahkan!', 'success');
+                } else { alert('❌ Gagal: ' + result.error); }
+            } catch (error) { alert('❌ Error: ' + error.message); }
         }
 
-        // Delete
+        // ── DELETE ────────────────────────────────────────
         async function deleteBook(id) {
             if (!confirm('Yakin ingin menghapus buku ini?')) return;
-            
             try {
                 await dbManager.deleteBook(id);
                 await loadBooks();
                 await loadDashboardStats();
-            } catch (error) {
-                alert('Gagal menghapus: ' + error.message);
-            }
+                showToast('✅ Buku dihapus', 'success');
+            } catch (error) { alert('Gagal menghapus: ' + error.message); }
         }
 
         async function deleteMember(id) {
             if (!confirm('Yakin ingin menghapus anggota ini?')) return;
-            
             try {
                 await dbManager.db.members.delete(id);
                 await loadMembers();
                 await loadDashboardStats();
-            } catch (error) {
-                alert('Gagal menghapus: ' + error.message);
-            }
+                showToast('✅ Anggota dihapus', 'success');
+            } catch (error) { alert('Gagal menghapus: ' + error.message); }
         }
 
-        // QR & Print
+        // ── QR & PRINT ────────────────────────────────────
         async function printBookQR(bookId) {
             try {
                 const book = await dbManager.db.books.get(bookId);
-                if (!book) {
-                    alert('Buku tidak ditemukan');
-                    return;
-                }
-                
+                if (!book) { alert('Buku tidak ditemukan'); return; }
                 const printWindow = window.open('', '_blank');
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(book.kode_aksesi)}`;
-                
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Label ${book.kode_aksesi}</title>
-                        <style>
-                            body { font-family: Arial; text-align: center; padding: 20px; }
-                            .label { border: 2px dashed #999; padding: 20px; display: inline-block; }
-                            img { width: 150px; height: 150px; }
-                            .kode { font-size: 18px; font-weight: bold; margin: 10px 0; }
-                            .judul { font-size: 14px; color: #666; max-width: 200px; }
-                            @media print { .no-print { display: none; } }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="no-print" style="margin-bottom: 20px;">
-                            <button onclick="window.print()">🖨️ Cetak</button>
-                        </div>
-                        <div class="label">
-                            <img src="${qrUrl}" alt="QR">
-                            <div class="kode">${book.kode_aksesi}</div>
-                            <div class="judul">${book.judul}</div>
-                        </div>
-                    </body>
-                    </html>
-                `);
+                printWindow.document.write(`<!DOCTYPE html><html><head><title>Label ${book.kode_aksesi}</title>
+                <style>body{font-family:Arial;text-align:center;padding:20px}.label{border:2px dashed #999;padding:20px;display:inline-block}img{width:150px;height:150px}.kode{font-size:18px;font-weight:bold;margin:10px 0}.judul{font-size:14px;color:#666;max-width:200px}@media print{.no-print{display:none}}</style>
+                </head><body><div class="no-print" style="margin-bottom:20px"><button onclick="window.print()">🖨️ Cetak</button></div>
+                <div class="label"><img src="${qrUrl}" alt="QR"><div class="kode">${book.kode_aksesi}</div><div class="judul">${book.judul}</div></div></body></html>`);
                 printWindow.document.close();
-                
-            } catch (error) {
-                alert('Gagal mencetak: ' + error.message);
-            }
+            } catch (error) { alert('Gagal mencetak: ' + error.message); }
         }
 
         async function printMemberCard(memberId) {
             try {
                 const member = await dbManager.db.members.get(memberId);
-                if (!member) {
-                    alert('Anggota tidak ditemukan');
-                    return;
-                }
-                
+                if (!member) { alert('Anggota tidak ditemukan'); return; }
                 const printWindow = window.open('', '_blank');
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(member.nis)}`;
-                
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Kartu ${member.nama_lengkap}</title>
-                        <style>
-                            @page { size: 85.6mm 54mm; margin: 0; }
-                            body { margin: 0; font-family: Arial; }
-                            .card {
-                                width: 85.6mm; height: 54mm;
-                                background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
-                                color: white; padding: 8mm; box-sizing: border-box;
-                                display: flex; flex-direction: column; justify-content: space-between;
-                            }
-                            .header { display: flex; justify-content: space-between; align-items: center; }
-                            .school { font-size: 10pt; font-weight: bold; }
-                            .type { font-size: 8pt; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; }
-                            .body { display: flex; justify-content: space-between; align-items: center; }
-                            .info { flex: 1; }
-                            .name { font-size: 12pt; font-weight: bold; margin-bottom: 2mm; }
-                            .detail { font-size: 9pt; opacity: 0.9; }
-                            .qr img { width: 20mm; height: 20mm; background: white; padding: 2mm; border-radius: 3mm; }
-                            .footer { font-size: 7pt; text-align: center; opacity: 0.8; }
-                            @media print { 
-                                .no-print { display: none; }
-                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="no-print" style="margin: 20px; text-align: center;">
-                            <button onclick="window.print()">🖨️ Cetak Kartu</button>
-                        </div>
-                        <div class="card">
-                            <div class="header">
-                                <div class="school">SD MUHAMMADIYAH 01 KUKUSAN</div>
-                                <div class="type">KARTU ANGGOTA</div>
-                            </div>
-                            <div class="body">
-                                <div class="info">
-                                    <div class="name">${member.nama_lengkap}</div>
-                                    <div class="detail">NIS: ${member.nis}</div>
-                                    <div class="detail">Kelas: ${member.kelas}</div>
-                                </div>
-                                <div class="qr">
-                                    <img src="${qrUrl}" alt="QR">
-                                </div>
-                            </div>
-                            <div class="footer">
-                                Berlaku selama menjadi siswa aktif
-                            </div>
-                        </div>
-                    </body>
-                    </html>
-                `);
+                printWindow.document.write(`<!DOCTYPE html><html><head><title>Kartu ${member.nama_lengkap}</title>
+                <style>@page{size:85.6mm 54mm;margin:0}body{margin:0;font-family:Arial}.card{width:85.6mm;height:54mm;background:linear-gradient(135deg,#1e4d3b 0%,#2d7055 100%);color:white;padding:8mm;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}.header{display:flex;justify-content:space-between;align-items:center}.school{font-size:10pt;font-weight:bold}.type{font-size:8pt;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px}.body{display:flex;justify-content:space-between;align-items:center}.info{flex:1}.name{font-size:12pt;font-weight:bold;margin-bottom:2mm}.detail{font-size:9pt;opacity:.9}.qr img{width:20mm;height:20mm;background:white;padding:2mm;border-radius:3mm}.footer{font-size:7pt;text-align:center;opacity:.8}@media print{.no-print{display:none}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+                </head><body><div class="no-print" style="margin:20px;text-align:center"><button onclick="window.print()">🖨️ Cetak Kartu</button></div>
+                <div class="card"><div class="header"><div class="school">SD MUHAMMADIYAH 01 KUKUSAN</div><div class="type">KARTU ANGGOTA</div></div>
+                <div class="body"><div class="info"><div class="name">${member.nama_lengkap}</div><div class="detail">NIS: ${member.nis}</div><div class="detail">Kelas: ${member.kelas}</div></div>
+                <div class="qr"><img src="${qrUrl}" alt="QR"></div></div>
+                <div class="footer">Berlaku selama menjadi siswa aktif</div></div></body></html>`);
                 printWindow.document.close();
-                
-            } catch (error) {
-                alert('Gagal mencetak: ' + error.message);
-            }
+            } catch (error) { alert('Gagal mencetak: ' + error.message); }
         }
 
-        function printAllLabels() {
-            if (AppState.allBooks.length === 0) {
-                alert('Belum ada buku untuk dicetak');
-                return;
-            }
-            
-            const printWindow = window.open('', '_blank');
-            const labels = AppState.allBooks.map(book => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(book.kode_aksesi)}`;
-                return `
-                    <div style="border: 1px dashed #999; padding: 10px; text-align: center; display: inline-block; margin: 5px; width: 150px;">
-                        <img src="${qrUrl}" style="width: 100px; height: 100px;">
-                        <div style="font-size: 12px; font-weight: bold; margin: 5px 0;">${book.kode_aksesi}</div>
-                        <div style="font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${book.judul}</div>
-                    </div>
-                `;
-            }).join('');
-            
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Label Buku</title>
-                    <style>
-                        body { font-family: Arial; padding: 20px; }
-                        .sheet { display: flex; flex-wrap: wrap; gap: 10px; }
-                        @media print { .no-print { display: none; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="no-print" style="margin-bottom: 20px;">
-                        <button onclick="window.print()">🖨️ Cetak Semua Label</button>
-                    </div>
-                    <div class="sheet">
-                        ${labels}
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        }
-
-        // Recent Loans
+        // ── RECENT LOANS ──────────────────────────────────
         async function loadRecentLoans() {
             try {
-                const loans = await dbManager.db.circulation
-                    .where('status')
-                    .equals('dipinjam')
-                    .reverse()
-                    .limit(5)
-                    .toArray();
-
+                const loans = await dbManager.db.circulation.where('status').equals('dipinjam').reverse().limit(5).toArray();
                 const container = document.getElementById('recent-loans');
-                
                 if (loans.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-4">Tidak ada peminjaman aktif</p>';
+                    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada peminjaman aktif</div></div>';
                     return;
                 }
-
-                const details = await Promise.all(
-                    loans.map(async (loan) => {
-                        const [book, member] = await Promise.all([
-                            dbManager.db.books.get(loan.book_id),
-                            dbManager.db.members.get(loan.member_id)
-                        ]);
-                        return { ...loan, book, member };
-                    })
-                );
-
-                container.innerHTML = details.map(item => `
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                const details = await Promise.all(loans.map(async (loan) => {
+                    const [book, member] = await Promise.all([dbManager.db.books.get(loan.book_id), dbManager.db.members.get(loan.member_id)]);
+                    return { ...loan, book, member };
+                }));
+                container.innerHTML = details.map(item => {
+                    const dueDate = new Date(item.due_date);
+                    const isOverdue = dueDate < new Date();
+                    return `<div class="loan-item">
                         <div>
-                            <p class="font-semibold text-sm">${item.book?.judul || '-'}</p>
-                            <p class="text-xs text-gray-600">${item.member?.nama_lengkap || '-'} (${item.member?.kelas || '-'})</p>
+                            <div class="loan-title">${item.book?.judul || '—'}</div>
+                            <div class="loan-meta">${item.member?.nama_lengkap || '—'} · ${item.member?.kelas || '—'}</div>
                         </div>
-                        <span class="text-xs text-gray-500">${new Date(item.due_date).toLocaleDateString('id-ID')}</span>
-                    </div>
-                `).join('');
-                
-            } catch (error) {
-                console.error('Load loans error:', error);
-            }
+                        <div class="loan-due ${isOverdue?'late'}">${isOverdue?'⚠️ ':''}${dueDate.toLocaleDateString('id-ID')}</div>
+                    </div>`;
+                }).join('');
+            } catch (error) { console.error('Load loans error:', error); }
         }
 
-        // Export
+        // ── EXPORT ────────────────────────────────────────
         async function exportToExcel() {
             try {
                 const data = await dbManager.exportAllData();
                 const jsonStr = JSON.stringify(data, null, 2);
                 const blob = new Blob([jsonStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `backup-perpustakaan-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                
-                alert('✅ Data berhasil di-export!');
-            } catch (error) {
-                alert('Gagal export: ' + error.message);
-            }
+                showToast('✅ Data berhasil di-export!', 'success');
+            } catch (error) { alert('Gagal export: ' + error.message); }
         }
 
-        // Sync
-        // ═══ KELOLA USER (via Google Sheets) ════════════════════════════════
-        async function syncToDrive() {
-            alert('Fitur sync ke Google Drive akan diimplementasikan di update berikutnya.\n\nUntuk saat ini, gunakan Export Excel sebagai backup.');
+        // ── IMPORT ────────────────────────────────────────
+        let importData = [];
+        let importType = '';
+
+        function previewImport(type) {
+            importType = type;
+            const fileInput = document.getElementById(`import-${type}-file`);
+            const previewDiv = document.getElementById(`import-${type}-preview`);
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = [];
+                    if (file.name.endsWith('.csv')) {
+                        const text = e.target.result;
+                        const lines = text.split('\n').filter(l => l.trim());
+                        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,'').toLowerCase());
+                        data = lines.slice(1).map(line => {
+                            const vals = line.split(',').map(v => v.trim().replace(/"/g,''));
+                            const obj = {};
+                            headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+                            return obj;
+                        });
+                    } else {
+                        const wb = XLSX.read(e.target.result, { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                        data = data.map(row => {
+                            const obj = {};
+                            Object.keys(row).forEach(k => { obj[k.toLowerCase().trim()] = String(row[k]); });
+                            return obj;
+                        });
+                    }
+
+                    importData = data;
+
+                    // Tampilkan 5 baris pertama
+                    const previewData = importData.slice(0, 5);
+                    if (previewData.length === 0) { previewDiv.innerHTML = '<p style="color:var(--red);font-size:12px">File kosong atau format tidak valid</p>'; return; }
+                    const headers = Object.keys(previewData[0]);
+                    previewDiv.innerHTML = `<p style="font-size:12px;color:var(--ink-muted);margin-bottom:8px">${importData.length} baris ditemukan. Preview 5 pertama:</p>
+                        <div style="overflow-x:auto"><table class="data-table" style="font-size:11px">
+                        <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                        <tbody>${previewData.map(row => `<tr>${headers.map(h => `<td>${row[h]||''}</td>`).join('')}</tr>`).join('')}</tbody>
+                        </table></div>`;
+                } catch(err) { previewDiv.innerHTML = `<p style="color:var(--red);font-size:12px">Error: ${err.message}</p>`; }
+            };
+            file.name.endsWith('.csv') ? reader.readAsText(file) : reader.readAsArrayBuffer(file);
         }
 
-        // PIN Toggle
-        window.togglePinDisplay = function() {
-            const display = document.getElementById('pin-display');
-            const user = AppState.currentUser;
-            if (!user) return;
-            
-            if (display.textContent === '••••••') {
-                display.textContent = user.pin || 'BELUM SET';
-            } else {
-                display.textContent = '••••••';
-            }
-        };
-
-        // Logout
-        window.logoutPustakawan = function() {
-            localStorage.removeItem('perpustakaan_session');
-            for (let i = localStorage.length - 1; i >= 0; i--) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('session') || key.includes('auth'))) {
-                    localStorage.removeItem(key);
+        async function executeImport(type) {
+            if (!importData || importData.length === 0) { alert('Tidak ada data untuk diimport. Pilih file terlebih dahulu.'); return; }
+            if (!confirm(`Import ${importData.length} ${type === 'books' ? 'buku' : 'anggota'}? Data yang sudah ada tidak akan terhapus.`)) return;
+            try {
+                let success = 0, fail = 0;
+                if (type === 'books') {
+                    for (const row of importData) {
+                        try {
+                            await dbManager.addBook({ judul: row.judul||row['judul'], pengarang: row.pengarang||'—', penerbit: row.penerbit||'', tahun_terbit: parseInt(row.tahun_terbit)||0, kategori_ddc: row.kategori_ddc||'000', lokasi_rak: row.lokasi_rak||'', isbn: row.isbn||null });
+                            success++;
+                        } catch(e) { fail++; }
+                    }
+                } else {
+                    for (const row of importData) {
+                        try {
+                            const existing = await dbManager.db.members.where('nis').equals(String(row.nis||'')).first();
+                            if (!existing) {
+                                await dbManager.addMember({ nis: String(row.nis||''), nama_lengkap: row.nama_lengkap||row['nama_lengkap']||'—', kelas: row.kelas||'', no_hp: row.no_hp||null, email_ortu: row.email_ortu||null, tipe_anggota: 'siswa', status: 'aktif' });
+                                success++;
+                            } else { fail++; }
+                        } catch(e) { fail++; }
+                    }
                 }
-            }
+                document.getElementById(`modal-import-${type}s`).classList.add('hidden');
+                showToast(`✅ Import selesai: ${success} berhasil, ${fail} gagal/duplikat`, 'success');
+                type === 'books' ? loadBooks() : loadMembers();
+                loadDashboardStats();
+            } catch(err) { alert('Error import: ' + err.message); }
+        }
+
+        // ── LOGOUT ────────────────────────────────────────
+        window.logoutPustakawan = function() {
+            authManager.logout();
             window.location.replace('../../index.html');
         };
 
-        // Close modal on outside click
-        window.onclick = function(event) {
-            if (event.target.classList.contains('fixed')) {
-                event.target.classList.add('hidden');
-                event.target.classList.remove('flex');
-            }
-        };
-
-        // ==================== IMPORT EXCEL/CSV ====================
-
-        let importType = ''; // 'books' atau 'members'
-        let importData = []; // Data yang akan diimport
-        let importFileName = '';
-
-        function showImportModal(type) {
-            importType = type;
-            importData = [];
-            importFileName = '';
-    
-            // Reset UI
-            document.getElementById('import-file').value = '';
-            document.getElementById('file-name').textContent = 'atau drag & drop di sini';
-            document.getElementById('import-preview').classList.add('hidden');
-            document.getElementById('import-progress').classList.add('hidden');
-            document.getElementById('import-results').classList.add('hidden');
-    
-            // Set title
-            const titles = {
-                'books': '📥 Import Data Buku',
-                'members': '📥 Import Data Anggota'
-            };
-            document.getElementById('import-title').textContent = titles[type];
-    
-            // Set button text
-            const btnTexts = {
-                'books': '⬇️ Download Template Buku',
-                'members': '⬇️ Download Template Anggota'
-            };
-            document.getElementById('btn-download-template').textContent = btnTexts[type];
-    
-            openModal('import');
-        }
-
-        function downloadTemplate() {
-            let data, filename, headers;
-    
-            if (importType === 'books') {
-                headers = ['kode_aksesi', 'judul', 'pengarang', 'penerbit', 'tahun_terbit', 'kategori_ddc', 'lokasi_rak', 'isbn'];
-                data = [
-                    ['500-001-2024', 'Matematika SD Kelas 4', 'Tim Erlangga', 'Erlangga', 2024, '500', 'Rak A-1', '978-602-1234-01'],
-                    ['F-045-2023', 'Dongeng Si Kancil', 'Riri Khasmita', 'Gramedia', 2023, 'F', 'Rak B-2', ''],
-                    ['200-012-2024', 'Pendidikan Agama Islam', 'Ahmad Syafi\'i', 'Bumi Aksara', 2024, '200', 'Rak C-1', '978-602-1234-03']
-                ];
-                filename = 'template-buku.xlsx';
-            } else {
-                headers = ['nis', 'nama_lengkap', 'kelas', 'no_hp', 'email_ortu'];
-                data = [
-                    ['2024001', 'Ahmad Fauzi', '4A', '081234567890', 'ortu.ahmad@email.com'],
-                    ['2024002', 'Siti Nurjanah', '4A', '081234567891', 'ortu.siti@email.com'],
-                    ['2024003', 'Budi Santoso', '4B', '081234567892', 'ortu.budi@email.com']
-                ];
-                filename = 'template-anggota.xlsx';
-        }
-    
-        // Buat worksheet
-        const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    
-        // Download
-        XLSX.writeFile(wb, filename);
-        }
-
-        function handleFileSelect(input) {
-            const file = input.files[0];
-            if (!file) return;
-    
-            importFileName = file.name;
-            document.getElementById('file-name').textContent = file.name;
-    
-            const reader = new FileReader();
-    
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-            
-                    // Ambil sheet pertama
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-            
-                    if (jsonData.length < 2) {
-                        alert('File kosong atau tidak valid!');
-                        return;
-                    }
-            
-                    // Parse data
-                    const headers = jsonData[0].map(h => String(h).toLowerCase().trim());
-                    const rows = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== ''));
-            
-                    importData = rows.map(row => {
-                        const obj = {};
-                        headers.forEach((header, index) => {
-                            obj[header] = row[index] || '';
-                    });
-                    return obj;
-                });
-            
-                // Validasi kolom wajib
-                const required = importType === 'books' 
-                    ? ['judul', 'pengarang', 'penerbit', 'kategori_ddc', 'lokasi_rak']
-                    : ['nis', 'nama_lengkap', 'kelas'];
-            
-                const missing = required.filter(r => !headers.includes(r));
-                if (missing.length > 0) {
-                    alert('Kolom wajib tidak ditemukan: ' + missing.join(', '));
-                    return;
-                }
-            
-                // Tampilkan preview
-                showPreview();
-            
-                } catch (error) {
-                alert('Gagal membaca file: ' + error.message);
-                console.error(error);
-                }
-            };
-    
-            reader.readAsArrayBuffer(file);
-        }
-
-        function showPreview() {
-            const previewDiv = document.getElementById('import-preview');
-            const table = document.getElementById('preview-table');
-            const stats = document.getElementById('import-stats');
-    
-            // Tampilkan 5 baris pertama
-            const previewData = importData.slice(0, 5);
+</script>
 </body>
 </html>

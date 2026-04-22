@@ -1,89 +1,95 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Guru - SDM01 Kukusan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-    <style>
-        body { font-family:'Nunito',sans-serif; }
-        .gradient-bg { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Guru — Perpustakaan SDM01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<link rel="stylesheet" href="../../assets/design.css">
+<style>
+body { font-family: 'Plus Jakarta Sans', sans-serif; }
+.book-result-card {
+  border:1px solid var(--border); border-radius:10px;
+  padding:12px 14px; margin-bottom:8px; background:#fff;
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  transition:box-shadow .2s;
+}
+.book-result-card:hover { box-shadow:var(--shadow); }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-<header class="gradient-bg text-white shadow-lg">
-    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">📚</div>
-            <div>
-                <h1 class="font-bold text-lg">Perpustakaan SDM01</h1>
-                <p class="text-xs text-blue-200">Dashboard Guru</p>
-            </div>
-        </div>
-        <button onclick="doLogout()"
-            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-            Logout
-        </button>
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p>Memuat dashboard…</p>
+</div>
+
+<!-- Topbar -->
+<header class="topbar">
+  <a class="topbar-logo" href="../../index.html">
+    <img src="../../assets/logo.jpeg" alt="Logo SDM01">
+    <div>
+      <div class="brand-name">SDM01 Kukusan</div>
+      <div class="brand-sub">Perpustakaan Digital</div>
     </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Portal Guru</div>
+  <div class="topbar-right">
+    <div class="user-avatar" id="user-avatar">G</div>
+    <div class="user-info">
+      <div class="user-name" id="welcome-name">Memuat…</div>
+      <div class="user-role">Guru</div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">⎋ Keluar</button>
+  </div>
 </header>
 
-<main class="container mx-auto px-4 py-6 max-w-2xl">
+<main class="main" style="margin-left:0">
+  <!-- Greeting -->
+  <div class="page-header animate-up">
+    <h1 id="greeting-text">Selamat Datang</h1>
+    <p id="welcome-email" style="color:var(--ink-muted);font-size:13px"></p>
+    <div class="page-meta" id="today-date">📅 —</div>
+  </div>
 
-    <!-- Selamat datang -->
-    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-        <div class="flex items-center gap-4">
-            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-3xl">👋</div>
-            <div>
-                <h2 class="text-xl font-bold text-gray-800" id="welcome-name">Halo, Guru!</h2>
-                <p class="text-sm text-gray-500" id="welcome-email"></p>
-            </div>
-        </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px">
+
+    <!-- Buku saya -->
+    <div class="card animate-up-d1">
+      <div class="card-header"><span class="card-title">📚 Buku yang Saya Pinjam</span></div>
+      <div id="my-books" style="padding:16px">
+        <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Memuat data…</div></div>
+      </div>
     </div>
 
-    <!-- Buku yang sedang dipinjam -->
-    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-            <span>📖</span> Buku Saya yang Dipinjam
-        </h3>
-        <div id="my-books">
-            <div class="text-center py-8 text-gray-500">
-                <div class="text-4xl mb-2">📚</div>
-                <p>Memuat data...</p>
-            </div>
+    <!-- Cari buku -->
+    <div class="card animate-up-d2">
+      <div class="card-header"><span class="card-title">🔍 Cari Buku Koleksi</span></div>
+      <div style="padding:16px">
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <input type="text" id="search-input" class="form-input" style="margin-bottom:0" placeholder="Judul, pengarang, atau kategori…" onkeypress="if(event.key==='Enter')searchBooks()">
+          <button class="btn btn-primary" onclick="searchBooks()">Cari</button>
         </div>
-    </div>
-
-    <!-- Cari Buku -->
-    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-            <span>🔍</span> Cari Buku Koleksi
-        </h3>
-        <div class="flex gap-2 mb-4">
-            <input type="text" id="search-input" placeholder="Ketik judul atau pengarang..."
-                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                onkeypress="if(event.key==='Enter') searchBooks()">
-            <button onclick="searchBooks()"
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold">Cari</button>
+        <div id="search-results">
+          <div class="empty-state" style="padding:20px 0"><div class="empty-icon" style="font-size:28px">🔍</div><div class="empty-title">Masukkan kata kunci</div></div>
         </div>
-        <div id="search-results" class="space-y-3 max-h-72 overflow-y-auto">
-            <p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari</p>
-        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Info peminjaman -->
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <h4 class="font-semibold text-blue-800 mb-2">📋 Ketentuan Peminjaman Guru</h4>
-        <ul class="text-sm text-blue-700 space-y-1">
-            <li>• Maksimal pinjam: 5 buku</li>
-            <li>• Durasi: 14 hari</li>
-            <li>• Denda keterlambatan: Rp 1.000/hari (maks Rp 10.000)</li>
-            <li>• Pengembalian di meja pustakawan</li>
-        </ul>
+  <!-- Info card -->
+  <div class="alert info" style="max-width:900px;margin-top:20px" class="animate-up-d3">
+    <div class="alert-icon">💡</div>
+    <div class="alert-body">
+      <div class="alert-title">Cara Meminjam Buku</div>
+      <div class="alert-text">Untuk meminjam buku, silakan hubungi pustakawan atau langsung ke ruang perpustakaan. 
+        Guru dapat meminjam maksimal 5 buku dengan batas waktu 14 hari.</div>
     </div>
-
+  </div>
 </main>
 
 <script src="../core/db.js"></script>
@@ -94,111 +100,110 @@
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await waitForLibraries();
-    await dbManager.init();
+  await waitForLibraries();
+  await dbManager.init();
 
-    // Refresh data dari Drive di background
-    const fileId = driveManager.getFileId();
-    if (fileId) {
-        driveManager.fetchPublicData(fileId)
-            .then(d => d && d.users && dbManager.importAllData(d))
-            .catch(() => {});
+  // Sync data user di background
+  sheetsManager.fetchUsers().then(async users => {
+    if (users && users.length > 0) {
+      await dbManager.db.users.clear();
+      await dbManager.db.users.bulkAdd(users);
     }
+  }).catch(() => {});
 
-    const ok = await authManager.init();
-    if (!ok) { redirectToLogin(); return; }
+  const ok = await authManager.init();
+  if (!ok) { redirectToLogin(); return; }
 
-    currentUser = authManager.getCurrentUser();
-    if (!currentUser || (currentUser.role !== 'guru' && currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
-        redirectToLogin(); return;
-    }
+  currentUser = authManager.getCurrentUser();
+  if (!currentUser || (currentUser.role !== 'guru' && currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+    redirectToLogin(); return;
+  }
 
-    document.getElementById('welcome-name').textContent = 'Halo, ' + (currentUser.nama || 'Guru') + '!';
-    document.getElementById('welcome-email').textContent = currentUser.email;
+  document.getElementById('greeting-text').textContent = 'Selamat Datang, ' + (currentUser.nama || 'Guru') + '!';
+  document.getElementById('welcome-email').textContent = currentUser.email;
+  document.getElementById('user-avatar').textContent = (currentUser.nama||'G').charAt(0).toUpperCase();
+  document.getElementById('today-date').textContent = '📅 ' + new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('loadingOverlay').classList.add('hidden');
 
-    await loadMyBooks();
+  await loadMyBooks();
 });
 
 async function loadMyBooks() {
-    const el = document.getElementById('my-books');
-    try {
-        const loans = await dbManager.db.circulation
-            .where('member_id').equals(currentUser.id)
-            .and(c => c.status === 'dipinjam').toArray();
+  const el = document.getElementById('my-books');
+  try {
+    // Cari berdasarkan member_id atau cari member dengan email yang sama
+    const loans = await dbManager.db.circulation
+      .where('member_id').equals(currentUser.id || 0)
+      .and(c => c.status === 'dipinjam').toArray();
 
-        if (loans.length === 0) {
-            el.innerHTML = `<div class="text-center py-8 text-gray-500">
-                <div class="text-4xl mb-2">📚</div>
-                <p>Tidak ada buku yang sedang dipinjam</p></div>`;
-            return;
-        }
-
-        const items = await Promise.all(loans.map(async l => {
-            const book = await dbManager.db.books.get(l.book_id);
-            return { ...l, book };
-        }));
-
-        el.innerHTML = items.filter(i => i.book).map(i => {
-            const due = new Date(i.due_date);
-            const diff = Math.ceil((due - new Date()) / 86400000);
-            const cls  = diff < 0 ? 'bg-red-50 border-red-200' : diff <= 2 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50';
-            const badge = diff < 0
-                ? `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">⚠️ Terlambat ${Math.abs(diff)}h</span>`
-                : `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">✅ ${diff} hari lagi</span>`;
-            return `<div class="border rounded-lg p-4 ${cls}">
-                <div class="flex justify-between items-start mb-1">
-                    <div><h4 class="font-semibold text-gray-800">${i.book.judul}</h4>
-                    <p class="text-sm text-gray-600">${i.book.pengarang}</p></div>
-                    ${badge}
-                </div>
-                <p class="text-xs text-gray-500">Jatuh tempo: ${due.toLocaleDateString('id-ID')}</p>
-            </div>`;
-        }).join('');
-    } catch (e) {
-        el.innerHTML = '<p class="text-center text-red-500 py-4">Gagal memuat data</p>';
+    if (loans.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:32px">📭</div><div class="empty-title">Tidak ada buku yang sedang dipinjam</div></div>';
+      return;
     }
+
+    const items = await Promise.all(loans.map(async l => {
+      const book = await dbManager.db.books.get(l.book_id);
+      return { ...l, book };
+    }));
+
+    el.innerHTML = items.filter(i => i.book).map(i => {
+      const due = new Date(i.due_date);
+      const diff = Math.ceil((due - new Date()) / 86400000);
+      const isOverdue = diff < 0;
+      return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:${isOverdue?'#fff8f8':diff<=2?'#fef9e7':'#fff'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">${i.book.judul}</div>
+            <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px">${i.book.pengarang}</div>
+          </div>
+          <span class="badge ${isOverdue?'red':diff<=2?'gold':'green'}">
+            ${isOverdue ? '⚠️ Terlambat' : diff===0 ? '⏰ Hari ini' : `⏳ ${diff} hari`}
+          </span>
+        </div>
+        <div style="font-size:11px;color:var(--ink-muted);margin-top:6px">Jatuh tempo: ${due.toLocaleDateString('id-ID')}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-title">Gagal memuat data</div></div>';
+  }
 }
 
 async function searchBooks() {
-    const q  = document.getElementById('search-input').value.trim();
-    const el = document.getElementById('search-results');
-    if (!q) { el.innerHTML = '<p class="text-center text-gray-500 py-4">Masukkan kata kunci</p>'; return; }
-    el.innerHTML = '<p class="text-center py-4">Mencari...</p>';
-    try {
-        const { data } = await dbManager.getAllBooks({ search: q, status: 'tersedia' });
-        if (!data || data.length === 0) {
-            el.innerHTML = '<p class="text-center py-4 text-gray-500">Tidak ada buku tersedia</p>'; return;
-        }
-        el.innerHTML = data.slice(0, 8).map(b => `
-            <div class="border rounded-lg p-3 hover:bg-gray-50">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-semibold text-gray-800 text-sm">${b.judul}</h4>
-                        <p class="text-xs text-gray-600">${b.pengarang}</p>
-                        <span class="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">${b.kategori_ddc || '-'}</span>
-                    </div>
-                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Tersedia</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">Rak: ${b.lokasi_rak || '-'}</p>
-            </div>`).join('');
-    } catch (e) {
-        el.innerHTML = '<p class="text-center py-4 text-red-500">Gagal mencari</p>';
+  const q  = document.getElementById('search-input').value.trim();
+  const el = document.getElementById('search-results');
+  if (!q) { el.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon" style="font-size:28px">🔍</div><div class="empty-title">Masukkan kata kunci</div></div>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-muted);font-size:13px">Mencari…</div>';
+  try {
+    const { data } = await dbManager.getAllBooks({ search: q });
+    if (!data || data.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada buku ditemukan</div></div>'; return;
     }
+    el.innerHTML = data.slice(0, 10).map(b => `
+      <div class="book-result-card">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.judul}</div>
+          <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px">${b.pengarang}</div>
+          <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge blue" style="font-size:10px">${b.kategori_ddc}</span>
+            <span style="font-size:10.5px;color:var(--ink-muted)">Rak: ${b.lokasi_rak||'—'}</span>
+          </div>
+        </div>
+        <span class="badge ${b.status==='tersedia'?'green':'orange'}" style="flex-shrink:0">${b.status}</span>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">❌</div><div class="empty-title">Gagal mencari</div></div>'; }
 }
 
 function doLogout() {
-    localStorage.removeItem('perpustakaan_session');
-    if (window.gapi && window.gapi.client) window.gapi.client.setToken(null);
-    window.location.replace('../../index.html');
+  authManager.logout();
+  window.location.replace('../../index.html');
 }
-
 function redirectToLogin() { window.location.replace('../../index.html'); }
 
 function waitForLibraries() {
-    return new Promise(res => {
-        const c = () => (typeof Dexie!=='undefined' && typeof dbManager!=='undefined') ? res() : setTimeout(c,100);
-        c();
-    });
+  return new Promise(res => {
+    const c = () => (typeof Dexie!=='undefined'&&typeof dbManager!=='undefined')?res():setTimeout(c,100);
+    c();
+  });
 }
 </script>
 </body>

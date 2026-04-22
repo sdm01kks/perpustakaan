@@ -1,320 +1,235 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Siswa - SDM01 Kukusan</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-    
-    <style>
-        body { font-family: 'Nunito', sans-serif; }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Siswa — Perpustakaan SDM01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<link rel="stylesheet" href="../../assets/design.css">
+<style>
+body { font-family: 'Plus Jakarta Sans', sans-serif; }
+.student-card {
+  background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 100%);
+  border-radius: 16px; padding: 20px 24px; color: #fff;
+  margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.student-card::after {
+  content: '📚';
+  position: absolute; right: 20px; top: 50%;
+  transform: translateY(-50%); font-size: 64px; opacity: .15;
+}
+.student-card .sc-label { font-size: 11px; font-weight: 600; opacity: .7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.student-card .sc-name  { font-family: 'Amiri', serif; font-size: 24px; font-weight: 700; line-height: 1.2; }
+.student-card .sc-meta  { font-size: 12px; opacity: .75; margin-top: 4px; }
+.loan-card {
+  border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px; margin-bottom:10px; background:#fff;
+  transition:box-shadow .2s;
+}
+.loan-card:hover { box-shadow:var(--shadow); }
+.loan-card.overdue { background:#fff8f8; border-color:rgba(192,57,43,.2); }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-    <!-- Header -->
-    <header class="gradient-bg text-white shadow-lg">
-        <div class="max-w-2xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">📚</div>
-                <div>
-                    <h1 class="font-bold text-lg">Perpustakaan SDM01</h1>
-                    <p class="text-xs text-blue-200">Kukusan</p>
-                </div>
-            </div>
-            <button onclick="window.logoutSiswa()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">
-                Logout
-            </button>
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p>Memuat portal siswa…</p>
+</div>
+
+<!-- Topbar -->
+<header class="topbar">
+  <a class="topbar-logo" href="../../index.html">
+    <img src="../../assets/logo.jpeg" alt="Logo SDM01">
+    <div>
+      <div class="brand-name">SDM01 Kukusan</div>
+      <div class="brand-sub">Perpustakaan Digital</div>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Portal Siswa</div>
+  <div class="topbar-right">
+    <button class="btn-logout" onclick="doLogout()">⎋ Keluar</button>
+  </div>
+</header>
+
+<main style="margin-top:var(--topbar-h);padding:24px 16px 60px;max-width:700px;margin-left:auto;margin-right:auto">
+
+  <!-- Student card -->
+  <div class="student-card animate-up">
+    <div class="sc-label">Kartu Anggota Perpustakaan</div>
+    <div class="sc-name" id="student-name">Memuat…</div>
+    <div class="sc-meta" id="student-meta"></div>
+    <div style="margin-top:14px;display:flex;gap:16px">
+      <div>
+        <div style="font-size:10px;opacity:.6;margin-bottom:2px">STATUS</div>
+        <div style="font-size:13px;font-weight:700" id="student-status">—</div>
+      </div>
+      <div>
+        <div style="font-size:10px;opacity:.6;margin-bottom:2px">AKTIF PINJAM</div>
+        <div style="font-size:13px;font-weight:700" id="loan-count">0 buku</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Peminjaman -->
+  <div class="card animate-up-d1" style="margin-bottom:20px">
+    <div class="card-header"><span class="card-title">📚 Buku yang Sedang Dipinjam</span></div>
+    <div id="my-loans" style="padding:16px">
+      <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Memuat data…</div></div>
+    </div>
+  </div>
+
+  <!-- Cari buku -->
+  <div class="card animate-up-d2">
+    <div class="card-header"><span class="card-title">🔍 Katalog Buku</span></div>
+    <div style="padding:16px">
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="text" id="search-input" class="form-input" style="margin-bottom:0" placeholder="Cari buku di perpustakaan…" onkeypress="if(event.key==='Enter')searchBooks()">
+        <button class="btn btn-primary" onclick="searchBooks()">Cari</button>
+      </div>
+      <div id="search-results">
+        <div class="empty-state" style="padding:16px 0"><div class="empty-icon" style="font-size:28px">🔍</div><div class="empty-title">Masukkan kata kunci untuk mencari</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="alert info" style="margin-top:16px">
+    <div class="alert-icon">💡</div>
+    <div class="alert-body">
+      <div class="alert-title">Peraturan Peminjaman</div>
+      <div class="alert-text">
+        Siswa dapat meminjam maksimal <strong>2 buku</strong> dengan durasi <strong>7 hari</strong>.
+        Terlambat mengembalikan dikenakan denda Rp 1.000/hari (maksimal Rp 10.000).
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="../core/db.js"></script>
+<script src="../core/sheets-config.js"></script>
+<script src="../core/drive-config.js"></script>
+<script src="../core/auth.js"></script>
+<script>
+const AppState = { currentUser: null, currentMember: null };
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await waitForLibraries();
+  await dbManager.init();
+
+  // Sync user data
+  sheetsManager.fetchUsers().then(async users => {
+    if (users && users.length > 0) {
+      await dbManager.db.users.clear();
+      await dbManager.db.users.bulkAdd(users);
+    }
+  }).catch(() => {});
+
+  const isLoggedIn = await authManager.init();
+  if (!isLoggedIn) { redirectToLogin(); return; }
+
+  AppState.currentUser = authManager.getCurrentUser();
+  if (!AppState.currentUser) { redirectToLogin(); return; }
+
+  // Load member data
+  if (AppState.currentUser.member_id) {
+    AppState.currentMember = await dbManager.db.members.get(AppState.currentUser.member_id);
+  }
+
+  renderUserInfo();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  await loadMyLoans();
+});
+
+function renderUserInfo() {
+  const u = AppState.currentUser;
+  const m = AppState.currentMember;
+  document.getElementById('student-name').textContent = m ? m.nama_lengkap : (u.nama || u.email);
+  document.getElementById('student-meta').textContent = m ? `NIS: ${m.nis}  ·  Kelas: ${m.kelas||'—'}` : u.email;
+  document.getElementById('student-status').textContent = '✅ Aktif';
+}
+
+async function loadMyLoans() {
+  const el = document.getElementById('my-loans');
+  try {
+    const userId = AppState.currentUser.id || 0;
+    const memberId = AppState.currentUser.member_id || userId;
+    const loans = await dbManager.db.circulation
+      .where('member_id').equals(memberId)
+      .and(l => l.status === 'dipinjam').toArray();
+
+    document.getElementById('loan-count').textContent = loans.length + ' buku';
+
+    if (loans.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada buku yang sedang dipinjam</div><div class="empty-desc">Kunjungi perpustakaan untuk meminjam buku</div></div>';
+      return;
+    }
+
+    const items = await Promise.all(loans.map(async l => {
+      const book = await dbManager.db.books.get(l.book_id);
+      return { ...l, book };
+    }));
+
+    el.innerHTML = items.filter(i => i.book).map(i => {
+      const due = new Date(i.due_date);
+      const diff = Math.ceil((due - new Date()) / 86400000);
+      const isOverdue = diff < 0;
+      return `<div class="loan-card ${isOverdue?'overdue':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--ink)">${i.book.judul}</div>
+            <div style="font-size:12px;color:var(--ink-muted);margin-top:2px">${i.book.pengarang}</div>
+          </div>
+          <span class="badge ${isOverdue?'red':diff<=2?'gold':'green'}">
+            ${isOverdue?`⚠️ ${Math.abs(diff)} hari terlambat`:diff===0?'⏰ Hari ini':diff===1?'⏳ Besok':`⏳ ${diff} hari lagi`}
+          </span>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-2xl mx-auto px-3 py-4 sm:px-4 sm:py-6">
-        
-        <!-- Welcome -->
-        <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-            <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl">👋</div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800" id="welcome-name">Halo, Siswa!</h2>
-                    <p class="text-gray-600" id="welcome-class">Kelas -</p>
-                </div>
-            </div>
+        <div style="margin-top:8px;display:flex;gap:14px">
+          <div style="font-size:11px;color:var(--ink-muted)">📅 Dipinjam: ${new Date(i.borrow_date).toLocaleDateString('id-ID')}</div>
+          <div style="font-size:11px;color:${isOverdue?'var(--red)':'var(--ink-muted)'}">🔔 Jatuh tempo: ${due.toLocaleDateString('id-ID')}</div>
         </div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-title">Gagal memuat data</div></div>'; }
+}
 
-        <!-- Status Peminjaman -->
-        <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span>📖</span> Buku Saya</h3>
-            <div id="my-books" class="space-y-3">
-                <div class="text-center py-8 text-gray-500">
-                    <div class="text-4xl mb-2">📚</div>
-                    <p>Belum ada buku yang dipinjam</p>
-                </div>
-            </div>
+async function searchBooks() {
+  const q = document.getElementById('search-input').value.trim();
+  const el = document.getElementById('search-results');
+  if (!q) { el.innerHTML = '<div class="empty-state" style="padding:16px 0"><div class="empty-icon" style="font-size:28px">🔍</div><div class="empty-title">Masukkan kata kunci</div></div>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-muted);font-size:13px">Mencari…</div>';
+  try {
+    const { data } = await dbManager.getAllBooks({ search: q });
+    if (!data || data.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:16px 0"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada buku ditemukan</div></div>'; return;
+    }
+    el.innerHTML = data.slice(0, 8).map(b => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">${b.judul}</div>
+          <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px">${b.pengarang} · Rak ${b.lokasi_rak||'—'}</div>
         </div>
+        <span class="badge ${b.status==='tersedia'?'green':'orange'}">${b.status}</span>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty-state" style="padding:16px 0"><div class="empty-icon">❌</div><div class="empty-title">Gagal mencari</div></div>'; }
+}
 
-        <!-- Cari Buku -->
-        <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><span>🔍</span> Cari Buku</h3>
-            <div class="flex gap-2 mb-4">
-                <input type="text" id="search-input" placeholder="Ketik judul buku..." 
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                    onkeypress="if(event.key==='Enter') searchBooks()">
-                <button onclick="searchBooks()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm">Cari</button>
-            </div>
-            <div id="search-results" class="space-y-3 max-h-64 overflow-y-auto">
-                <p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari buku</p>
-            </div>
-        </div>
+function doLogout() {
+  authManager.logout();
+  window.location.replace('../../index.html');
+}
+function redirectToLogin() { window.location.replace('../../index.html'); }
 
-        <!-- Info -->
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <h4 class="font-semibold text-blue-800 mb-2">📋 Informasi</h4>
-            <ul class="text-sm text-blue-700 space-y-1">
-                <li>• Maksimal pinjam: 2 buku</li>
-                <li>• Durasi: 7 hari</li>
-                <li>• Denda keterlambatan: Rp 1.000/hari</li>
-                <li>• Perpanjangan: 1x (3 hari)</li>
-            </ul>
-        </div>
-
-    </main>
-
-    <!-- Scripts -->
-    <script src="../core/db.js"></script>
-    <script src="../core/sheets-config.js"></script>
-    <script src="../core/drive-config.js"></script>
-    <script src="../core/auth.js"></script>
-
-    <script>
-        // State management
-        const AppState = {
-            currentUser: null,
-            currentMember: null,
-            isReady: false
-        };
-
-        // Inisialisasi aplikasi
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                await initializeApp();
-            } catch (error) {
-                console.error('Failed to initialize app:', error);
-                alert('Gagal memuat aplikasi. Silakan refresh halaman.');
-            }
-        });
-
-        async function initializeApp() {
-            // Tunggu library siap
-            await waitForLibraries();
-            
-            // Init database
-            const dbInit = await dbManager.init();
-            if (!dbInit) throw new Error('Database failed to initialize');
-
-            // Refresh data user dari Sheets di background
-            sheetsManager.fetchUsers().then(async users => {
-                if (users.length > 0) {
-                    await dbManager.db.users.clear();
-                    await dbManager.db.users.bulkAdd(users);
-                }
-            }).catch(() => {});
-
-            // Cek autentikasi
-            const isLoggedIn = await authManager.init();
-            if (!isLoggedIn) {
-                redirectToLogin();
-                return;
-            }
-
-            // Set state
-            AppState.currentUser = authManager.getCurrentUser();
-            if (!AppState.currentUser) {
-                redirectToLogin();
-                return;
-            }
-
-            // Load member data jika ada
-            if (AppState.currentUser.member_id) {
-                AppState.currentMember = await dbManager.db.members.get(AppState.currentUser.member_id);
-            }
-
-            AppState.isReady = true;
-
-            // Render UI
-            renderUserInfo();
-            await loadMyBooks();
-        }
-
-        function waitForLibraries() {
-            return new Promise((resolve) => {
-                const check = () => {
-                    if (typeof Dexie !== 'undefined' && typeof dbManager !== 'undefined') {
-                        resolve();
-                    } else {
-                        setTimeout(check, 100);
-                    }
-                };
-                check();
-            });
-        }
-
-        function redirectToLogin() {
-            window.location.replace('../../index.html');
-        }
-
-        function renderUserInfo() {
-            const user = AppState.currentUser;
-            const member = AppState.currentMember;
-            
-            document.getElementById('welcome-name').textContent = 'Halo, ' + (user?.nama || 'Siswa');
-            document.getElementById('welcome-class').textContent = member ? 'Kelas ' + member.kelas : '';
-        }
-
-        async function loadMyBooks() {
-            if (!AppState.isReady || !AppState.currentUser) return;
-
-            const container = document.getElementById('my-books');
-            const userId = AppState.currentUser.member_id || AppState.currentUser.id;
-
-            try {
-                const loans = await dbManager.db.circulation
-                    .where('member_id')
-                    .equals(userId)
-                    .and(c => c.status === 'dipinjam')
-                    .toArray();
-
-                if (loans.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-8 text-gray-500">
-                            <div class="text-4xl mb-2">📚</div>
-                            <p>Belum ada buku yang dipinjam</p>
-                            <p class="text-sm mt-2">Silakan cari dan pinjam buku di perpustakaan</p>
-                        </div>`;
-                    return;
-                }
-
-                // Ambil detail buku untuk setiap loan
-                const loanDetails = await Promise.all(
-                    loans.map(async (loan) => {
-                        const book = await dbManager.db.books.get(loan.book_id);
-                        return { ...loan, book };
-                    })
-                );
-
-                container.innerHTML = loanDetails.map(item => {
-                    if (!item.book) return ''; // Skip jika buku tidak ditemukan
-
-                    const dueDate = new Date(item.due_date);
-                    const today = new Date();
-                    const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-                    
-                    let statusClass, statusText;
-                    if (diffDays < 0) {
-                        statusClass = 'bg-red-50 border-red-200';
-                        statusText = `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">⚠️ Terlambat ${Math.abs(diffDays)} hari</span>`;
-                    } else if (diffDays <= 2) {
-                        statusClass = 'bg-yellow-50 border-yellow-200';
-                        statusText = `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">⏰ ${diffDays} hari lagi</span>`;
-                    } else {
-                        statusClass = 'bg-gray-50';
-                        statusText = `<span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">✅ ${diffDays} hari lagi</span>`;
-                    }
-
-                    return `
-                        <div class="border rounded-lg p-4 ${statusClass}">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h4 class="font-semibold text-gray-800">${item.book.judul}</h4>
-                                    <p class="text-sm text-gray-600">${item.book.pengarang}</p>
-                                </div>
-                                ${statusText}
-                            </div>
-                            <p class="text-xs text-gray-500">Jatuh tempo: ${dueDate.toLocaleDateString('id-ID')}</p>
-                        </div>`;
-                }).join('');
-
-            } catch (error) {
-                console.error('Gagal load buku:', error);
-                container.innerHTML = '<p class="text-center text-red-500 py-4">Gagal memuat data buku</p>';
-            }
-        }
-
-        async function searchBooks() {
-            const query = document.getElementById('search-input').value.trim();
-            const container = document.getElementById('search-results');
-
-            if (!query) {
-                container.innerHTML = '<p class="text-center text-gray-500 py-4">Masukkan kata kunci untuk mencari buku</p>';
-                return;
-            }
-
-            container.innerHTML = '<p class="text-center py-4">Mencari...</p>';
-
-            try {
-                const result = await dbManager.getAllBooks({ search: query, status: 'tersedia' });
-                const books = result.data || [];
-
-                if (books.length === 0) {
-                    container.innerHTML = '<p class="text-center py-4 text-gray-500">Tidak ada buku yang tersedia</p>';
-                    return;
-                }
-
-                container.innerHTML = books.slice(0, 5).map(book => `
-                    <div class="border rounded-lg p-3 hover:bg-gray-50 transition-all">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-semibold text-gray-800 text-sm">${book.judul}</h4>
-                                <p class="text-xs text-gray-600">${book.pengarang}</p>
-                                <span class="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">${book.kategori_ddc}</span>
-                            </div>
-                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Tersedia</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Lokasi: ${book.lokasi_rak}</p>
-                    </div>
-                `).join('');
-
-            } catch (error) {
-                container.innerHTML = '<p class="text-center py-4 text-red-500">Gagal mencari buku</p>';
-            }
-        }
-
-        // LOGOUT - Definisi global
-        window.logoutSiswa = function() {
-            console.log('Logout initiated...');
-            
-            try {
-                // Clear all auth-related storage
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.includes('session') || key.includes('auth') || key.includes('user'))) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-
-                // Clear Google token if exists
-                if (window.gapi && window.gapi.client) {
-                    window.gapi.client.setToken(null);
-                }
-
-                console.log('Logout successful, redirecting...');
-                
-                // Use replace to prevent back button from returning to dashboard
-                window.location.replace('../../index.html');
-                
-            } catch (error) {
-                console.error('Logout error:', error);
-                // Fallback redirect
-                window.location.href = '../../index.html';
-            }
-        };
-    </script>
-
+function waitForLibraries() {
+  return new Promise(res => {
+    const c = () => (typeof Dexie!=='undefined'&&typeof dbManager!=='undefined')?res():setTimeout(c,100);
+    c();
+  });
+}
+</script>
 </body>
 </html>
