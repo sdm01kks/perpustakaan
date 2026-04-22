@@ -197,6 +197,7 @@
       <div class="card-header">
         <span class="card-title">📚 Daftar Buku</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="downloadTemplate('xlsx')" title="Download template Excel untuk import buku">📋 Template</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-import-books').classList.remove('hidden')">📥 Import</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('add-book')">+ Tambah Buku</button>
         </div>
@@ -497,23 +498,43 @@
 
 <!-- ── MODAL: IMPORT BUKU ─────────────────────────── -->
 <div class="modal-backdrop hidden" id="modal-import-books">
-  <div class="modal">
+  <div class="modal" style="max-width:560px">
     <div class="modal-header">
       <div class="modal-title">📥 Import Data Buku</div>
       <button class="modal-close" onclick="document.getElementById('modal-import-books').classList.add('hidden')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="alert info">
-        <div class="alert-icon">💡</div>
-        <div class="alert-body">
-          <div class="alert-title">Format File Excel/CSV</div>
-          <div class="alert-text">Kolom yang diperlukan: <strong>judul, pengarang, penerbit, tahun_terbit, kategori_ddc, lokasi_rak, isbn</strong></div>
+
+      <!-- Step 1: Download template -->
+      <div style="background:var(--green-ghost);border:1px solid rgba(30,77,59,.15);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--green-dark);margin-bottom:3px">📋 Langkah 1 — Download Template</div>
+            <div style="font-size:11.5px;color:var(--ink-muted)">Gunakan template resmi agar format kolom sudah pasti benar.</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn btn-primary btn-sm" onclick="downloadTemplate('xlsx')">⬇ Excel (.xlsx)</button>
+            <button class="btn btn-ghost btn-sm" onclick="downloadTemplate('csv')">⬇ CSV (.csv)</button>
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Pilih File Excel (.xlsx) atau CSV (.csv)</label>
+
+      <!-- Step 2: Upload -->
+      <div style="background:#f8f8f8;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--ink-mid);margin-bottom:8px">📂 Langkah 2 — Upload File yang Sudah Diisi</div>
+        <div class="alert info" style="margin-bottom:12px">
+          <div class="alert-icon">💡</div>
+          <div class="alert-body">
+            <div class="alert-title">Kolom wajib</div>
+            <div class="alert-text"><strong>judul, pengarang</strong> — wajib diisi.<br>
+            <strong>penerbit, tahun_terbit, kategori_ddc, lokasi_rak, isbn</strong> — boleh kosong.</div>
+          </div>
+        </div>
+        <label class="form-label">Pilih file Excel (.xlsx) atau CSV (.csv)</label>
         <input type="file" id="import-books-file" accept=".xlsx,.csv" class="form-input" onchange="previewImport('books')">
       </div>
+
+      <!-- Preview -->
       <div id="import-books-preview" class="import-preview"></div>
     </div>
     <div class="modal-footer">
@@ -1037,6 +1058,136 @@
                     </div>`;
                 }).join('');
             } catch (error) { console.error('Load loans error:', error); }
+        }
+
+        // ── DOWNLOAD TEMPLATE ────────────────────────────
+        function downloadTemplate(format) {
+            if (format === 'csv') {
+                // CSV template
+                const header = 'judul,pengarang,penerbit,tahun_terbit,kategori_ddc,lokasi_rak,isbn';
+                const rows = [
+                    'Matematika Kelas 4,Tim Erlangga,Erlangga,2024,500,Rak A-1,978-602-1234-01',
+                    'Dongeng Si Kancil,Riri Khasmita,Gramedia,2023,F,Rak B-2,',
+                    'Pendidikan Agama Islam,Ahmad Syafii,Bumi Aksara,2024,200,Rak C-1,978-602-1234-03',
+                ];
+                const csv = [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                _triggerDownload(blob, 'template_import_buku.csv');
+                showToast('✅ Template CSV berhasil didownload', 'success');
+                return;
+            }
+
+            // XLSX template — menggunakan SheetJS
+            if (typeof XLSX === 'undefined') {
+                showToast('❌ SheetJS belum dimuat. Coba lagi sesaat.', 'error');
+                return;
+            }
+
+            // Header row
+            const headers = ['judul','pengarang','penerbit','tahun_terbit','kategori_ddc','lokasi_rak','isbn'];
+            const headerLabels = ['Judul Buku *','Pengarang *','Penerbit','Tahun Terbit','Kategori DDC','Lokasi Rak','ISBN'];
+
+            // Contoh data
+            const examples = [
+                ['Matematika Kelas 4','Tim Erlangga','Erlangga',2024,'500','Rak A-1','978-602-1234-01'],
+                ['Dongeng Si Kancil','Riri Khasmita','Gramedia',2023,'F','Rak B-2',''],
+                ['Pendidikan Agama Islam','Ahmad Syafii','Bumi Aksara',2024,'200','Rak C-1',''],
+                ['Ensiklopedia Anak','Tim Redaksi','Kawan Pustaka',2023,'000','Rak R-1',''],
+                ['Bahasa Indonesia SD','Siti Nurjanah','Yudhistira',2024,'400','Rak A-2',''],
+            ];
+
+            const wb = XLSX.utils.book_new();
+
+            // ── Sheet 1: Template ──────────────────────────────
+            const wsData = [headerLabels, ...examples];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Lebar kolom
+            ws['!cols'] = [
+                {wch:35}, // judul
+                {wch:22}, // pengarang
+                {wch:18}, // penerbit
+                {wch:14}, // tahun_terbit
+                {wch:16}, // kategori_ddc
+                {wch:14}, // lokasi_rak
+                {wch:20}, // isbn
+            ];
+
+            // Style header row (SheetJS CE tidak support cell style, tapi kita bisa set row height)
+            ws['!rows'] = [{hpx:20}];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Template Import Buku');
+
+            // ── Sheet 2: Referensi DDC ──────────────────────────
+            const ddcData = [
+                ['Kode DDC', 'Kategori', 'Contoh'],
+                ['000', 'Karya Umum & Komputer', 'Ensiklopedia, Kamus'],
+                ['100', 'Filsafat & Psikologi', 'Etika, Psikologi Anak'],
+                ['200', 'Agama & Teologi', 'Al-Quran, PAI'],
+                ['300', 'Ilmu Sosial', 'PKn, IPS, Ekonomi'],
+                ['400', 'Bahasa', 'Bahasa Indonesia, Inggris'],
+                ['500', 'Sains & Matematika', 'IPA, Matematika'],
+                ['600', 'Teknologi & Terapan', 'Kesehatan, Pertanian'],
+                ['700', 'Seni & Olahraga', 'Musik, Gambar, Olahraga'],
+                ['800', 'Sastra', 'Puisi, Drama, Cerpen'],
+                ['900', 'Sejarah & Geografi', 'Sejarah Indonesia, Atlas'],
+                ['F', 'Fiksi & Cerita', 'Dongeng, Novel Anak'],
+            ];
+            const wsDdc = XLSX.utils.aoa_to_sheet(ddcData);
+            wsDdc['!cols'] = [{wch:12},{wch:26},{wch:30}];
+            XLSX.utils.book_append_sheet(wb, wsDdc, 'Referensi Kategori DDC');
+
+            // ── Sheet 3: Petunjuk ────────────────────────────────
+            const instrData = [
+                ['PETUNJUK PENGISIAN TEMPLATE IMPORT BUKU'],
+                [''],
+                ['Perpustakaan Digital SD Muhammadiyah 01 Kukusan'],
+                [''],
+                ['KOLOM WAJIB DIISI:'],
+                ['• judul        — Judul lengkap buku (tidak boleh kosong)'],
+                ['• pengarang    — Nama pengarang/penulis (tidak boleh kosong)'],
+                [''],
+                ['KOLOM OPSIONAL:'],
+                ['• penerbit     — Nama penerbit buku'],
+                ['• tahun_terbit — Tahun terbit buku (angka, mis: 2024)'],
+                ['• kategori_ddc — Kode DDC, lihat sheet "Referensi Kategori DDC"'],
+                ['• lokasi_rak   — Lokasi fisik di rak (mis: Rak A-1)'],
+                ['• isbn         — Nomor ISBN jika ada'],
+                [''],
+                ['CARA IMPORT:'],
+                ['1. Isi data buku di sheet "Template Import Buku" mulai baris 2'],
+                ['2. Jangan ubah nama kolom di baris pertama'],
+                ['3. Simpan file ini (tetap .xlsx atau export ke .csv)'],
+                ['4. Buka Dashboard Pustakawan → Koleksi Buku → Import'],
+                ['5. Upload file → klik Preview → klik Import Data'],
+                [''],
+                ['CATATAN:'],
+                ['• Buku dengan judul+pengarang yang sama akan tetap diimport (bukan duplikat check)'],
+                ['• Kode aksesi akan dibuat otomatis jika tidak diisi'],
+                ['• Status awal buku adalah "tersedia"'],
+                ['• Kolom "cover" dan "sinopsis" diisi lewat fitur Edit di dashboard'],
+            ];
+            const wsInstr = XLSX.utils.aoa_to_sheet(instrData);
+            wsInstr['!cols'] = [{wch:70}];
+            XLSX.utils.book_append_sheet(wb, wsInstr, 'Petunjuk');
+
+            // Write and download
+            const wbout = XLSX.write(wb, { bookType:'xlsx', type:'binary' });
+            const buf = new ArrayBuffer(wbout.length);
+            const view = new Uint8Array(buf);
+            for (let i = 0; i < wbout.length; i++) view[i] = wbout.charCodeAt(i) & 0xFF;
+            const blob = new Blob([buf], { type:'application/octet-stream' });
+            _triggerDownload(blob, 'template_import_buku.xlsx');
+            showToast('✅ Template Excel berhasil didownload', 'success');
+        }
+
+        function _triggerDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
         // ── EXPORT ────────────────────────────────────────
