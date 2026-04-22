@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bootstrap Akses — Perpustakaan SDM01</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f0f4f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.card { background: #fff; border-radius: 14px; width: 100%; max-width: 420px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+.card-top { background: #1e4d3b; padding: 24px 28px; }
+.card-top h1 { font-size: 20px; color: #fff; font-weight: 700; margin-bottom: 4px; }
+.card-top p { font-size: 12px; color: rgba(255,255,255,.6); }
+.card-body { padding: 24px 28px; }
+.warning { background: #fff8e1; border: 1px solid #f9a825; border-radius: 8px; padding: 12px 14px; font-size: 12.5px; color: #5d4037; margin-bottom: 20px; line-height: 1.6; }
+label { display: block; font-size: 12px; font-weight: 600; color: #4a4840; margin-bottom: 5px; }
+input { width: 100%; padding: 10px 13px; border: 1.5px solid #d0d0c8; border-radius: 8px; font-size: 14px; font-family: inherit; margin-bottom: 14px; outline: none; }
+input:focus { border-color: #2d7055; box-shadow: 0 0 0 3px rgba(45,112,85,.1); }
+.pin-input { text-align: center; letter-spacing: 8px; font-size: 18px; }
+.btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; }
+.btn-green { background: #1e4d3b; color: #fff; margin-bottom: 8px; }
+.btn-green:hover { background: #0f3226; }
+.btn-green:disabled { background: #999; cursor: not-allowed; }
+.btn-gray { background: #f0efed; color: #4a4840; }
+.btn-gray:hover { background: #e0e0d8; }
+.status { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 13px; display: none; }
+.status.ok  { background: #e5f2ec; color: #1e4d3b; font-weight: 600; }
+.status.err { background: #fdecea; color: #c0392b; }
+.divider { border: none; border-top: 1px solid #eee; margin: 18px 0; }
+.small { font-size: 11.5px; color: #7d7a72; text-align: center; margin-top: 12px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-top">
+    <h1>🔑 Bootstrap Akses Admin</h1>
+    <p>Perpustakaan Digital SDM01 Kukusan — Tool Darurat</p>
+  </div>
+  <div class="card-body">
+    <div class="warning">
+      ⚠️ Halaman ini <strong>bypass semua sistem login normal</strong> dan langsung menulis akun ke browser ini.
+      Gunakan hanya jika tidak bisa login melalui halaman utama.<br><br>
+      Setelah berhasil, <strong>hapus atau rename file ini</strong> dari server untuk keamanan.
+    </div>
+
+    <label>Email Akun Admin</label>
+    <input type="email" id="inp-email" value="arif.fairel@gmail.com" placeholder="email@domain.com">
+
+    <label>Nama Lengkap</label>
+    <input type="text" id="inp-nama" value="Arif Fairel" placeholder="Nama Lengkap">
+
+    <label>PIN (6 digit angka)</label>
+    <input type="password" id="inp-pin" class="pin-input" value="123456" maxlength="6" inputmode="numeric" placeholder="••••••">
+
+    <button class="btn btn-green" id="btn-inject" onclick="injectUser()">
+      ✅ Buat Akun &amp; Langsung Login
+    </button>
+    <a href="index.html" class="btn btn-gray" style="display:block;text-align:center;text-decoration:none;padding:12px">
+      ← Kembali ke Login Normal
+    </a>
+
+    <div class="status" id="status"></div>
+
+    <hr class="divider">
+    <div class="small">
+      Akun akan dibuat dengan role <strong>superadmin</strong>.<br>
+      PIN dapat diganti dari halaman User Management setelah login.
+    </div>
+  </div>
+</div>
+
+<script>
+async function injectUser() {
+  const email = document.getElementById('inp-email').value.trim();
+  const nama  = document.getElementById('inp-nama').value.trim();
+  const pin   = document.getElementById('inp-pin').value.trim();
+  const btn   = document.getElementById('btn-inject');
+  const st    = document.getElementById('status');
+
+  // Validasi
+  if (!email || !nama) { showStatus('Email dan nama wajib diisi.', 'err'); return; }
+  if (!/^\S+@\S+\.\S+$/.test(email)) { showStatus('Format email tidak valid.', 'err'); return; }
+  if (!/^\d{6}$/.test(pin)) { showStatus('PIN harus tepat 6 digit angka.', 'err'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Memproses…';
+
+  try {
+    // Buka database dengan Dexie (skema yang sama dengan app)
+    const db = new Dexie('PerpustakaanSDM01');
+    db.version(1).stores({
+      books:       '++id, kode_aksesi, judul, pengarang, penerbit, tahun_terbit, kategori_ddc, lokasi_rak, status, createdAt, updatedAt',
+      members:     '++id, nis, nama_lengkap, tipe_anggota, kelas, no_hp, email_ortu, status, createdAt, updatedAt',
+      circulation: '++id, book_id, member_id, borrow_date, due_date, return_date, status, denda, createdAt, updatedAt',
+      users:       '++id, email, nama, role, pin, is_active, createdAt, last_login',
+      settings:    'key, value',
+      syncQueue:   '++id, table_name, action, data, timestamp, status'
+    });
+    await db.open();
+
+    // Cek apakah email sudah ada
+    const existing = await db.users.where('email').equals(email).first();
+
+    let userId;
+    if (existing) {
+      // Update akun yang sudah ada
+      await db.users.update(existing.id, {
+        nama:      nama,
+        role:      'superadmin',
+        pin:       pin,
+        is_active: true,
+        last_login: new Date().toISOString()
+      });
+      userId = existing.id;
+    } else {
+      // Buat akun baru
+      userId = await db.users.add({
+        email:      email,
+        nama:       nama,
+        role:       'superadmin',
+        pin:        pin,
+        is_active:  true,
+        createdAt:  new Date().toISOString(),
+        last_login: new Date().toISOString()
+      });
+    }
+
+    // Pastikan settings dasar ada
+    const hasInit = await db.settings.get('initialized');
+    if (!hasInit) {
+      await db.settings.bulkPut([
+        { key: 'initialized',       value: true },
+        { key: 'school_name',       value: 'SD Muhammadiyah 01 Kukusan' },
+        { key: 'max_books_student', value: 2 },
+        { key: 'max_books_teacher', value: 5 },
+        { key: 'loan_days_student', value: 7 },
+        { key: 'loan_days_teacher', value: 14 },
+        { key: 'denda_per_day',     value: 1000 },
+        { key: 'app_version',       value: '1.2.0' }
+      ]);
+    }
+
+    // Buat sesi login langsung
+    const userObj = { id: userId, email, nama, role: 'superadmin', pin, is_active: true };
+    localStorage.setItem('perpustakaan_session', JSON.stringify(userObj));
+
+    showStatus(`✅ Akun "${nama}" (${email}) berhasil ${existing ? 'diperbarui' : 'dibuat'}! Mengalihkan ke dashboard…`, 'ok');
+
+    // Redirect ke dashboard setelah 1.5 detik
+    setTimeout(() => {
+      window.location.href = 'app/dashboard/pustakawan.html';
+    }, 1500);
+
+  } catch (err) {
+    showStatus('❌ Gagal: ' + err.message, 'err');
+    btn.disabled = false;
+    btn.textContent = '✅ Buat Akun & Langsung Login';
+    console.error(err);
+  }
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+  el.style.display = 'block';
+}
+
+// Enter key
+document.addEventListener('keypress', e => {
+  if (e.key === 'Enter') injectUser();
+});
+</script>
+</body>
+</html>
