@@ -1,18 +1,42 @@
-# Aplikasi Perpustakaan
+# 📚 Perpustakaan Digital SD Muhammadiyah 01 Kukusan
 
-Folder ini berisi kode aplikasi utama.
+Sistem manajemen perpustakaan serverless berbasis PWA (Progressive Web App) 
+yang menggunakan Google Drive sebagai cloud storage.
 
-## Struktur
+## ✨ Fitur Utama
 
-- `index.html` - Halaman utama
-- `manifest.json` - Konfigurasi PWA
-- `sw.js` - Service Worker untuk offline mode
-- `core/` - Fungsi inti (database, auth, sync)
-- `modules/` - Fitur bisnis (buku, anggota, sirkulasi)
-- `ui/` - Komponen tampilan dan styling
-- `utils/` - Fungsi pembantu
+- 🔄 **Offline First** - Bekerja tanpa internet, sync saat online
+- 📱 **Responsive** - Desktop, tablet, dan mobile friendly
+- 🔐 **Multi-user** - Role: Superadmin, Admin, Pustakawan, Siswa, Guru
+- 📷 **QR Code** - Scan kartu anggota dan label buku
+- ☁️ **Cloud Backup** - Otomatis sync ke Google Drive
+- 📊 **Laporan** - Export Excel dan PDF
 
-## Cara Menggunakan
+## 🚀 Quick Start
 
-1. Buka `index.html` di browser
-2. Atau akses via GitHub Pages setelah di-deploy
+### Untuk Pustakawan
+
+1. Buka: https://sdm01kks.github.io/perpustakaan/
+2. Login dengan akun yang diberikan admin
+3. Mulai kelola buku dan proses peminjaman
+
+### Untuk Siswa
+
+1. Scan QR code di kartu perpustakaan
+2. Cari buku di katalog digital
+3. Lihat status peminjaman Anda
+
+## 📖 Dokumentasi
+
+- [Panduan Setup](docs/SETUP.md)
+- [Panduan Pengguna](docs/USER-GUIDE.md)
+- [Solusi Masalah](docs/TROUBLESHOOTING.md)
+
+## 🛠️ Teknologi
+
+- **Frontend**: HTML5, Tailwind CSS, Vanilla JavaScript
+- **Storage**: IndexedDB (local), Google Drive (cloud)
+- **PWA**: Service Worker, Web App Manifest
+- **Utilities**: Dexie.js, QRCode.js, SheetJS, jsPDF
+
+## 📂 Struktur Repository
