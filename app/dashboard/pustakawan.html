@@ -98,8 +98,11 @@
   </a>
 
   <div class="sidebar-label">Perpustakaan</div>
+  <a class="nav-item" href="../katalog.html">
+    <span class="nav-icon">🗂️</span> Katalog Rak Buku
+  </a>
   <a class="nav-item" id="nav-books" onclick="showSection('books');closeSidebar()">
-    <span class="nav-icon">📚</span> Koleksi Buku
+    <span class="nav-icon">📚</span> Kelola Koleksi
   </a>
   <a class="nav-item" id="nav-members" onclick="showSection('members');closeSidebar()">
     <span class="nav-icon">👥</span> Anggota
@@ -158,6 +161,8 @@
       <div class="card">
         <div class="card-header"><span class="card-title">⚡ Aksi Cepat</span></div>
         <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+          <a href="../katalog.html" class="btn btn-secondary btn-full">🗂️ Lihat Rak Buku</a>
+          <a href="../katalog.html" class="btn btn-secondary btn-full">🗂️ Lihat Rak Buku</a>
           <a href="sirkulasi.html" class="btn btn-primary btn-full">🔄 Buka Sirkulasi</a>
           <button class="btn btn-secondary btn-full" onclick="showSection('books');openModal('add-book')">📚 Tambah Buku</button>
           <button class="btn btn-secondary btn-full" onclick="showSection('members');openModal('add-member')">👤 Tambah Anggota</button>
@@ -833,6 +838,7 @@
                     <td><span class="badge blue">${book.kategori_ddc}</span></td>
                     <td><span class="badge ${getStatusBadge(book.status)}">${book.status}</span></td>
                     <td style="white-space:nowrap">
+                        <button onclick="openEditBookMeta(${book.id})" class="btn btn-ghost btn-sm" title="Edit Cover & Sinopsis" style="margin-right:2px">🖼️</button>
                         <button onclick="printBookQR(${book.id})" class="btn btn-ghost btn-sm" title="Cetak QR">🖨️</button>
                         <button onclick="deleteBook(${book.id})" class="btn btn-ghost btn-sm" title="Hapus" style="margin-left:4px">🗑️</button>
                     </td>
@@ -1129,6 +1135,165 @@
                 type === 'books' ? loadBooks() : loadMembers();
                 loadDashboardStats();
             } catch(err) { alert('Error import: ' + err.message); }
+        }
+
+        // ── EDIT COVER & SINOPSIS ─────────────────────────
+        function openEditBookMeta(bookId) {
+            const book = AppState.allBooks.find(b => b.id === bookId);
+            if (!book) { alert('Buku tidak ditemukan'); return; }
+
+            // Buka katalog.html di tab baru dan langsung ke edit
+            // Atau tampilkan modal inline di sini
+            showBookMetaModal(book);
+        }
+
+        const _pendingBookMeta = {};
+
+        function showBookMetaModal(book) {
+            const existingWrap = document.getElementById('book-meta-modal-wrap');
+            if (existingWrap) existingWrap.remove();
+
+            const color = {'000':'#5d6d7e','100':'#8e44ad','200':'#1e4d3b','300':'#2980b9',
+                           '400':'#16a085','500':'#27ae60','600':'#d35400','700':'#c0392b',
+                           '800':'#2c3e50','900':'#c9882a','F':'#e91e8c'}[book.kategori_ddc]||'#4a4840';
+
+            const wrap = document.createElement('div');
+            wrap.id = 'book-meta-modal-wrap';
+            wrap.className = 'modal-backdrop';
+            wrap.innerHTML = `
+              <div class="modal" style="max-width:460px;position:relative">
+                <div class="modal-header">
+                  <div class="modal-title">🖼️ Cover &amp; Sinopsis Buku</div>
+                  <button class="modal-close" onclick="document.getElementById('book-meta-modal-wrap').remove()">✕</button>
+                </div>
+                <div class="modal-body">
+                  <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:14px">${book.judul}</div>
+
+                  <!-- Cover -->
+                  <div class="form-group">
+                    <label class="form-label">COVER BUKU</label>
+                    <div style="display:flex;gap:14px;align-items:flex-start">
+                      <div id="bm-cover-preview" style="width:80px;height:112px;border-radius:3px 6px 6px 3px;border-left:4px solid rgba(0,0,0,.12);overflow:hidden;box-shadow:-2px 3px 8px rgba(0,0,0,.18);flex-shrink:0">
+                        ${book.cover
+                          ? `<img src="${book.cover}" style="width:100%;height:100%;object-fit:cover">`
+                          : `<div style="width:100%;height:100%;background:${color};display:flex;align-items:center;justify-content:center;font-size:24px">📖</div>`}
+                      </div>
+                      <div style="flex:1">
+                        <label style="display:block;background:var(--green-pale);border:1.5px dashed var(--green-light);border-radius:8px;padding:12px;text-align:center;cursor:pointer" for="bm-file-input">
+                          <div style="font-size:16px;margin-bottom:3px">🖼️</div>
+                          <div style="font-size:12px;font-weight:600;color:var(--green-dark)">Pilih Gambar</div>
+                          <div style="font-size:10.5px;color:var(--ink-muted);margin-top:2px">JPG / PNG / WebP · Maks. 500 KB</div>
+                        </label>
+                        <input type="file" id="bm-file-input" accept="image/jpeg,image/png,image/webp" style="display:none"
+                          onchange="handleBookCoverChange(event,${book.id})">
+                        <div id="bm-cover-msg" style="font-size:11px;margin-top:5px;color:var(--ink-muted)">
+                          ${book.cover ? '✅ Cover sudah ada. Upload baru untuk mengganti.' : 'Belum ada cover.'}
+                        </div>
+                        ${book.cover ? `<button onclick="clearBookCover(${book.id})"
+                          style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:2px 0;font-family:inherit;margin-top:4px">
+                          🗑 Hapus cover</button>` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sinopsis -->
+                  <div class="form-group">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                      <label class="form-label" style="margin-bottom:0">SINOPSIS</label>
+                      <span id="bm-char" style="font-size:11px;color:var(--ink-muted)">0 / 500</span>
+                    </div>
+                    <textarea id="bm-sinopsis" maxlength="500" rows="5"
+                      style="width:100%;padding:10px 13px;border:1.5px solid #d8d6cf;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;outline:none;line-height:1.6;"
+                      onfocus="this.style.borderColor='var(--green-mid)'" onblur="this.style.borderColor='#d8d6cf'"
+                      oninput="bmUpdateChar(this)"
+                      placeholder="Tulis sinopsis singkat… (maks. 500 karakter)">${book.sinopsis||''}</textarea>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-ghost" onclick="document.getElementById('book-meta-modal-wrap').remove()">Batal</button>
+                  <button class="btn btn-primary" onclick="saveBookMeta(${book.id})">💾 Simpan</button>
+                </div>
+                <div id="bm-save-msg" style="padding:0 20px 14px;font-size:12.5px;text-align:center"></div>
+              </div>`;
+
+            document.body.appendChild(wrap);
+            bmUpdateChar(document.getElementById('bm-sinopsis'));
+        }
+
+        function bmUpdateChar(ta) {
+            const n = ta.value.length;
+            const el = document.getElementById('bm-char');
+            if (!el) return;
+            el.textContent = n + ' / 500';
+            el.style.color = n > 450 ? 'var(--red)' : n > 350 ? 'var(--gold)' : 'var(--ink-muted)';
+        }
+
+        function handleBookCoverChange(event, bookId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const msg = document.getElementById('bm-cover-msg');
+            if (file.size > 512 * 1024) {
+                msg.style.color = 'var(--red)';
+                msg.textContent = '❌ File terlalu besar (' + (file.size/1024).toFixed(0) + ' KB). Maks. 500 KB.';
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const b64 = e.target.result;
+                document.getElementById('bm-cover-preview').innerHTML =
+                    '<img src="' + b64 + '" style="width:100%;height:100%;object-fit:cover">';
+                msg.style.color = 'var(--green-dark)';
+                msg.textContent = '✅ ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB) — siap disimpan';
+                if (!_pendingBookMeta[bookId]) _pendingBookMeta[bookId] = {};
+                _pendingBookMeta[bookId].cover = b64;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearBookCover(bookId) {
+            if (!confirm('Hapus cover buku ini?')) return;
+            if (!_pendingBookMeta[bookId]) _pendingBookMeta[bookId] = {};
+            _pendingBookMeta[bookId].cover = null;
+            const book = AppState.allBooks.find(b => b.id === bookId);
+            const color = {'000':'#5d6d7e','100':'#8e44ad','200':'#1e4d3b','300':'#2980b9','400':'#16a085',
+                           '500':'#27ae60','600':'#d35400','700':'#c0392b','800':'#2c3e50','900':'#c9882a',
+                           'F':'#e91e8c'}[book?.kategori_ddc]||'#4a4840';
+            document.getElementById('bm-cover-preview').innerHTML =
+                '<div style="width:100%;height:100%;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:24px">📖</div>';
+            document.getElementById('bm-cover-msg').textContent = 'Cover akan dihapus saat disimpan.';
+            document.getElementById('bm-cover-msg').style.color = 'var(--gold)';
+        }
+
+        async function saveBookMeta(bookId) {
+            const sinopsis = document.getElementById('bm-sinopsis').value.trim();
+            const msgEl    = document.getElementById('bm-save-msg');
+            const updates  = { sinopsis, updatedAt: new Date().toISOString() };
+
+            if (_pendingBookMeta[bookId] && 'cover' in _pendingBookMeta[bookId]) {
+                updates.cover = _pendingBookMeta[bookId].cover;
+            }
+
+            try {
+                msgEl.style.color = 'var(--ink-muted)';
+                msgEl.textContent = '⏳ Menyimpan…';
+                await dbManager.db.books.update(bookId, updates);
+
+                // Update local AppState
+                const idx = AppState.allBooks.findIndex(b => b.id === bookId);
+                if (idx >= 0) Object.assign(AppState.allBooks[idx], updates);
+                delete _pendingBookMeta[bookId];
+
+                msgEl.style.color = 'var(--green-dark)';
+                msgEl.textContent = '✅ Berhasil disimpan!';
+                setTimeout(() => {
+                    document.getElementById('book-meta-modal-wrap')?.remove();
+                    renderBooksTable(AppState.allBooks);
+                }, 900);
+            } catch(err) {
+                msgEl.style.color = 'var(--red)';
+                msgEl.textContent = '❌ Gagal: ' + err.message;
+            }
         }
 
         // ── LOGOUT ────────────────────────────────────────
