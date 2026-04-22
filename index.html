@@ -319,24 +319,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (user) { redirect(user.role); return; }
     }
 
-    // Cek setup diperlukan
-    const needsSetup = await checkNeedsSetup();
-    if (needsSetup) {
-      hideLoading();
-      document.getElementById('ui-setup-banner').classList.remove('hidden');
-      showLoginUI();
-      return;
-    }
-
-    // Sinkron user dari Sheets (non-blocking)
-    setLoading('Memuat data dari server…');
+    // SELALU sync dari Sheets dulu — sebelum cek apapun.
+    // Ini penting agar akun yang ada di Sheets bisa login meski IndexedDB kosong
+    // (mis. browser baru, perangkat berbeda, atau storage terhapus).
+    setLoading('Memuat data pengguna dari server…');
+    let sheetsSyncOk = false;
     try {
       const sheetUsers = await sheetsManager.fetchUsers();
       if (sheetUsers && sheetUsers.length > 0) {
         await dbManager.db.users.clear();
         await dbManager.db.users.bulkAdd(sheetUsers);
+        sheetsSyncOk = true;
+        console.log('✅ Sheets sync berhasil:', sheetUsers.length, 'user');
       }
-    } catch (e) { console.warn('Sheets sync gagal, pakai data lokal:', e.message); }
+    } catch (e) {
+      console.warn('⚠️ Sheets sync gagal, pakai data lokal:', e.message);
+    }
+
+    // Setelah sync (atau gagal sync), baru cek apakah setup diperlukan
+    const needsSetup = await checkNeedsSetup();
+    if (needsSetup) {
+      hideLoading();
+      document.getElementById('ui-setup-banner').classList.remove('hidden');
+      // Tampilkan info tambahan jika Sheets juga gagal
+      if (!sheetsSyncOk) {
+        showError('Tidak dapat terhubung ke server. Jika ini instalasi pertama, lakukan setup. Jika sudah setup, periksa koneksi internet.');
+      }
+      showLoginUI();
+      return;
+    }
 
     hideLoading();
     showLoginUI();
@@ -349,9 +360,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function checkNeedsSetup() {
+  // Sistem dianggap butuh setup jika tidak ada SATU PUN user aktif dengan PIN
   try {
-    const sa = await dbManager.db.users.where('role').equals('superadmin').first();
-    return !sa || !sa.pin;
+    const anyUserWithPin = await dbManager.db.users
+      .filter(u => u.is_active && u.pin && String(u.pin).length === 6)
+      .first();
+    return !anyUserWithPin;
   } catch (e) { return false; }
 }
 
@@ -363,7 +377,25 @@ async function loginWithPin() {
   if (!/^\d{6}$/.test(pin)) { showError('PIN hanya boleh berisi angka'); return; }
   hideError(); setLoading('Memverifikasi…');
   try {
-    const result = await authManager.loginWithPin(email, pin);
+    let result = await authManager.loginWithPin(email, pin);
+
+    // Jika tidak ditemukan, coba sync ulang dari Sheets lalu coba lagi.
+    // Ini menangani kasus di mana sync awal gagal tapi user sudah ada di Sheets.
+    if (!result.success && result.error && result.error.includes('tidak ditemukan')) {
+      setLoading('Mencoba sinkronisasi ulang dari server…');
+      try {
+        const sheetUsers = await sheetsManager.fetchUsers();
+        if (sheetUsers && sheetUsers.length > 0) {
+          await dbManager.db.users.clear();
+          await dbManager.db.users.bulkAdd(sheetUsers);
+          // Coba login sekali lagi setelah sync
+          result = await authManager.loginWithPin(email, pin);
+        }
+      } catch (syncErr) {
+        console.warn('Re-sync gagal:', syncErr.message);
+      }
+    }
+
     if (!result.success) {
       hideLoading(); showLoginUI(); showError(result.error);
       if (result.error && result.error.includes('belum memiliki PIN'))
