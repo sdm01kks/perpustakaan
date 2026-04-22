@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Katalog Buku — Perpustakaan SDM01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<link rel="stylesheet" href="../assets/design.css">
+<style>
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f2f4f2; }
+
+/* ── Filter bar ─────────────────────────────── */
+.filter-bar {
+  position: sticky; top: var(--topbar-h); z-index: 90;
+  background: #fff; border-bottom: 1px solid var(--border);
+  padding: 12px 20px; display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.filter-scroll {
+  display: flex; gap: 8px; overflow-x: auto; flex: 1;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.filter-scroll::-webkit-scrollbar { display: none; }
+.filter-chip {
+  flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: #fff;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .2s; color: var(--ink-mid); white-space: nowrap;
+  font-family: inherit;
+}
+.filter-chip:hover  { border-color: var(--green-mid); color: var(--green-dark); }
+.filter-chip.active { background: var(--green-dark); border-color: var(--green-dark); color: #fff; }
+.search-wrap { display: flex; gap: 8px; align-items: center; }
+.search-input {
+  padding: 8px 14px; border-radius: 20px;
+  border: 1.5px solid var(--border); font-family: inherit;
+  font-size: 13px; outline: none; width: 200px; transition: all .2s;
+}
+.search-input:focus { border-color: var(--green-mid); width: 240px; box-shadow: 0 0 0 3px rgba(45,112,85,.08); }
+
+/* ── Section heading (shelf label) ─────────── */
+.shelf-section { margin: 24px 20px 0; }
+.shelf-label {
+  font-family: 'Amiri', serif; font-size: 20px; font-weight: 700;
+  color: var(--green-deep); display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.shelf-label::after { content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, var(--green-pale), transparent); }
+.shelf-count { font-family: 'Plus Jakarta Sans', serif; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+
+/* ── Shelf visual ───────────────────────────── */
+.shelf-wrap {
+  background: #f8f4ee;
+  border-radius: 10px;
+  padding: 20px 16px 12px;
+  position: relative;
+  border: 1px solid #e0d8cc;
+  box-shadow: inset 0 -6px 0 #c9b99a, 0 2px 8px rgba(0,0,0,.06);
+  margin-bottom: 8px;
+}
+/* Wooden shelf bottom */
+.shelf-wrap::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 12px;
+  background: linear-gradient(180deg, #c9b99a 0%, #b5a285 100%);
+  border-radius: 0 0 10px 10px;
+}
+
+/* ── Book grid ──────────────────────────────── */
+.book-grid {
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+
+/* ── Book card ──────────────────────────────── */
+.book-card {
+  width: 100px; cursor: pointer;
+  transition: transform .2s; position: relative;
+  flex-shrink: 0;
+}
+.book-card:hover { transform: translateY(-6px); }
+.book-card:hover .book-cover { box-shadow: 0 12px 24px rgba(0,0,0,.25); }
+
+.book-cover {
+  width: 100px; height: 138px; border-radius: 3px 6px 6px 3px;
+  position: relative; overflow: hidden;
+  box-shadow: -2px 3px 6px rgba(0,0,0,.2), 2px 0 4px rgba(0,0,0,.1);
+  transition: box-shadow .2s;
+  /* spine effect */
+  border-left: 5px solid rgba(0,0,0,.15);
+}
+.book-cover img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.book-cover-placeholder {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 8px; text-align: center;
+  font-size: 10px; font-weight: 700; line-height: 1.3;
+  color: rgba(255,255,255,.9);
+  word-break: break-word; overflow: hidden;
+}
+.book-cover-placeholder .book-icon { font-size: 22px; margin-bottom: 6px; opacity: .8; }
+
+.book-status-dot {
+  position: absolute; top: 5px; right: 5px;
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.8);
+}
+.dot-tersedia { background: #2ecc71; }
+.dot-dipinjam { background: #e67e22; }
+.dot-rusak    { background: #e74c3c; }
+.dot-hilang   { background: #95a5a6; }
+
+.book-title {
+  font-size: 10.5px; font-weight: 600; color: var(--ink-mid);
+  margin-top: 7px; text-align: center;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.35;
+}
+
+/* ── Empty shelf ────────────────────────────── */
+.shelf-empty {
+  width: 100%; text-align: center; padding: 30px;
+  color: var(--ink-muted); font-size: 13px;
+  font-style: italic;
+}
+
+/* ── Detail modal ───────────────────────────── */
+.detail-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15,50,38,.65);
+  z-index: 400; display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.detail-modal-backdrop.hidden { display: none; }
+.detail-modal {
+  background: #fff; border-radius: 16px;
+  width: 100%; max-width: 540px; max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0,0,0,.3);
+  animation: popIn .25s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popIn { from { opacity:0; transform:scale(.92) translateY(16px); } to { opacity:1; transform:none; } }
+
+.detail-top {
+  display: flex; gap: 20px; padding: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-cover {
+  width: 110px; height: 152px; flex-shrink: 0;
+  border-radius: 4px 8px 8px 4px;
+  border-left: 6px solid rgba(0,0,0,.12);
+  overflow: hidden;
+  box-shadow: -2px 4px 12px rgba(0,0,0,.2);
+}
+.detail-cover img { width: 100%; height: 100%; object-fit: cover; }
+.detail-cover-placeholder {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 10px; text-align: center;
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.9);
+}
+.detail-cover-placeholder .big-icon { font-size: 32px; margin-bottom: 8px; opacity: .8; }
+
+.detail-info { flex: 1; min-width: 0; }
+.detail-title {
+  font-family: 'Amiri', serif; font-size: 20px; font-weight: 700;
+  color: var(--green-deep); line-height: 1.25; margin-bottom: 6px;
+}
+.detail-author { font-size: 13px; color: var(--ink-mid); margin-bottom: 10px; }
+.detail-meta-grid {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;
+  font-size: 12px;
+}
+.detail-meta-label { color: var(--ink-muted); font-weight: 600; }
+.detail-meta-value { color: var(--ink); }
+
+.detail-body { padding: 18px 24px 24px; }
+.detail-synopsis-label {
+  font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--ink-muted); margin-bottom: 8px;
+}
+.detail-synopsis {
+  font-size: 13.5px; color: var(--ink-mid); line-height: 1.75;
+}
+.detail-no-synopsis {
+  font-size: 13px; color: var(--ink-muted); font-style: italic;
+}
+.detail-actions {
+  display: flex; gap: 10px; margin-top: 18px; padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.detail-close {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(0,0,0,.08); border: none; border-radius: 50%;
+  width: 30px; height: 30px; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s; color: var(--ink);
+}
+.detail-close:hover { background: rgba(0,0,0,.16); }
+
+/* ── Stats bar ──────────────────────────────── */
+.stats-bar {
+  display: flex; gap: 20px; padding: 12px 20px;
+  background: var(--green-pale); border-bottom: 1px solid rgba(30,77,59,.1);
+  font-size: 12.5px; flex-wrap: wrap;
+}
+.stats-bar-item { display: flex; align-items: center; gap: 6px; }
+.stats-bar-dot  { width: 10px; height: 10px; border-radius: 50%; }
+.stats-bar-label { color: var(--ink-muted); }
+.stats-bar-val  { font-weight: 700; color: var(--green-dark); }
+
+/* ── Scroll hint ────────────────────────────── */
+.scroll-hint { display: none; }
+@media (max-width: 600px) {
+  .search-input { width: 140px; }
+  .search-input:focus { width: 160px; }
+  .book-card { width: 84px; }
+  .book-cover { width: 84px; height: 116px; }
+  .book-title { font-size: 9.5px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <a class="topbar-logo" href="../index.html">
+    <img src="../assets/logo.jpeg" alt="SDM01">
+    <div>
+      <div class="brand-name">SDM01 Kukusan</div>
+      <div class="brand-sub">Perpustakaan Digital</div>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">📚 Katalog Buku</div>
+  <div class="topbar-right" id="topbar-right"></div>
+</header>
+
+<!-- Filter + search bar -->
+<div class="filter-bar">
+  <div class="filter-scroll" id="filter-chips">
+    <button class="filter-chip active" data-ddc="" onclick="setFilter('')">Semua</button>
+    <button class="filter-chip" data-ddc="000" onclick="setFilter('000')">000 · Umum</button>
+    <button class="filter-chip" data-ddc="100" onclick="setFilter('100')">100 · Filsafat</button>
+    <button class="filter-chip" data-ddc="200" onclick="setFilter('200')">200 · Agama</button>
+    <button class="filter-chip" data-ddc="300" onclick="setFilter('300')">300 · Sosial</button>
+    <button class="filter-chip" data-ddc="400" onclick="setFilter('400')">400 · Bahasa</button>
+    <button class="filter-chip" data-ddc="500" onclick="setFilter('500')">500 · Sains</button>
+    <button class="filter-chip" data-ddc="600" onclick="setFilter('600')">600 · Teknologi</button>
+    <button class="filter-chip" data-ddc="700" onclick="setFilter('700')">700 · Seni</button>
+    <button class="filter-chip" data-ddc="800" onclick="setFilter('800')">800 · Sastra</button>
+    <button class="filter-chip" data-ddc="900" onclick="setFilter('900')">900 · Sejarah</button>
+    <button class="filter-chip" data-ddc="F" onclick="setFilter('F')">F · Fiksi</button>
+  </div>
+  <div class="search-wrap">
+    <input type="text" id="search-input" class="search-input" placeholder="🔍 Cari buku…" oninput="renderShelves()">
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stats-bar-item"><div class="stats-bar-dot" style="background:#2ecc71"></div><div class="stats-bar-label">Tersedia:</div><div class="stats-bar-val" id="stat-tersedia">—</div></div>
+  <div class="stats-bar-item"><div class="stats-bar-dot" style="background:#e67e22"></div><div class="stats-bar-label">Dipinjam:</div><div class="stats-bar-val" id="stat-dipinjam">—</div></div>
+  <div class="stats-bar-item"><div class="stats-bar-dot" style="background:#e74c3c"></div><div class="stats-bar-label">Rusak:</div><div class="stats-bar-val" id="stat-rusak">—</div></div>
+  <div class="stats-bar-item" style="margin-left:auto"><div class="stats-bar-label">Total:</div><div class="stats-bar-val" id="stat-total">—</div></div>
+</div>
+
+<!-- Main content -->
+<main style="margin-top: calc(var(--topbar-h)); padding-bottom: 40px;" id="main-content">
+  <!-- Rendered dynamically -->
+  <div id="shelves-container" style="margin-top: 0"></div>
+  <div id="empty-state" style="display:none; text-align:center; padding:60px 20px; color:var(--ink-muted)">
+    <div style="font-size:48px; margin-bottom:12px">📭</div>
+    <div style="font-size:16px; font-weight:700; color:var(--ink-mid); margin-bottom:6px">Tidak ada buku ditemukan</div>
+    <div style="font-size:13px">Coba ubah kata kunci atau filter kategori</div>
+  </div>
+</main>
+
+<!-- Book detail modal -->
+<div class="detail-modal-backdrop hidden" id="detail-backdrop" onclick="handleBackdropClick(event)">
+  <div class="detail-modal" id="detail-modal" style="position:relative">
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+    <div class="detail-top" id="detail-top"></div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<script src="core/db.js"></script>
+<script src="core/auth.js"></script>
+<script>
+// ── State ──────────────────────────────────────────
+const State = {
+  books:    [],
+  filter:   '',
+  isAdmin:  false,  // pustakawan or above
+  currentUser: null
+};
+
+// DDC labels
+const DDC_LABELS = {
+  '000': 'Karya Umum', '100': 'Filsafat & Psikologi',
+  '200': 'Agama',      '300': 'Ilmu Sosial',
+  '400': 'Bahasa',     '500': 'Sains & Matematika',
+  '600': 'Teknologi',  '700': 'Seni & Olahraga',
+  '800': 'Sastra',     '900': 'Sejarah & Geografi',
+  'F':   'Fiksi & Cerita'
+};
+
+// Cover colors per DDC (for placeholder)
+const DDC_COLORS = {
+  '000':'#5d6d7e', '100':'#8e44ad', '200':'#1e4d3b',
+  '300':'#2980b9', '400':'#16a085', '500':'#27ae60',
+  '600':'#d35400', '700':'#c0392b', '800':'#2c3e50',
+  '900':'#c9882a', 'F':'#e91e8c', 'default':'#4a4840'
+};
+
+// ── Init ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await waitFor(() => typeof Dexie !== 'undefined' && typeof dbManager !== 'undefined');
+  await dbManager.init();
+
+  // Check if user is logged in and their role
+  try {
+    const ok = await authManager.init();
+    if (ok) {
+      State.currentUser = authManager.getCurrentUser();
+      const role = State.currentUser?.role;
+      State.isAdmin = ['superadmin','admin','pustakawan'].includes(role);
+
+      // Build topbar right
+      const tr = document.getElementById('topbar-right');
+      const dashLink = { superadmin:'dashboard/pustakawan.html', admin:'dashboard/pustakawan.html',
+                         pustakawan:'dashboard/pustakawan.html', guru:'dashboard/guru.html',
+                         siswa:'dashboard/siswa.html' }[role] || '../index.html';
+      tr.innerHTML = `<a href="${dashLink}" class="btn-logout" style="text-decoration:none">← Dashboard</a>`;
+    } else {
+      const tr = document.getElementById('topbar-right');
+      tr.innerHTML = `<a href="../index.html" class="btn-logout" style="text-decoration:none">Login</a>`;
+    }
+  } catch(e) { /* halaman ini bisa diakses tanpa login untuk browsing */ }
+
+  await loadBooks();
+});
+
+async function loadBooks() {
+  try {
+    const result = await dbManager.getAllBooks();
+    State.books = result.data || [];
+    updateStats();
+    renderShelves();
+  } catch(e) {
+    document.getElementById('shelves-container').innerHTML =
+      `<div style="text-align:center;padding:60px;color:var(--red)">Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+// ── Stats ──────────────────────────────────────────
+function updateStats() {
+  const b = State.books;
+  document.getElementById('stat-tersedia').textContent = b.filter(x => x.status==='tersedia').length;
+  document.getElementById('stat-dipinjam').textContent = b.filter(x => x.status==='dipinjam').length;
+  document.getElementById('stat-rusak').textContent    = b.filter(x => x.status==='rusak').length;
+  document.getElementById('stat-total').textContent    = b.length + ' buku';
+}
+
+// ── Filter ─────────────────────────────────────────
+function setFilter(ddc) {
+  State.filter = ddc;
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.ddc === ddc);
+  });
+  renderShelves();
+}
+
+// ── Render shelves ─────────────────────────────────
+function renderShelves() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const container = document.getElementById('shelves-container');
+  const emptyEl   = document.getElementById('empty-state');
+
+  // Filter books
+  let books = State.books;
+  if (State.filter) books = books.filter(b => b.kategori_ddc === State.filter);
+  if (q) books = books.filter(b =>
+    b.judul.toLowerCase().includes(q) ||
+    (b.pengarang||'').toLowerCase().includes(q) ||
+    b.kode_aksesi.toLowerCase().includes(q)
+  );
+
+  if (books.length === 0) {
+    container.innerHTML = '';
+    emptyEl.style.display = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // Group by DDC
+  if (State.filter) {
+    // Single category - one shelf
+    const label = DDC_LABELS[State.filter] || State.filter;
+    container.innerHTML = buildSection(State.filter, label, books);
+  } else if (q) {
+    // Search - flat list under one heading
+    container.innerHTML = buildSection('search', `Hasil pencarian "${q}" (${books.length} buku)`, books);
+  } else {
+    // All categories - group by DDC, sorted
+    const groups = {};
+    books.forEach(b => {
+      const ddc = b.kategori_ddc || 'Lainnya';
+      if (!groups[ddc]) groups[ddc] = [];
+      groups[ddc].push(b);
+    });
+    const sorted = Object.keys(groups).sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+    container.innerHTML = sorted
+      .filter(ddc => groups[ddc].length > 0)
+      .map(ddc => buildSection(ddc, DDC_LABELS[ddc] || ddc, groups[ddc]))
+      .join('');
+  }
+}
+
+function buildSection(ddc, label, books) {
+  return `
+    <div class="shelf-section">
+      <div class="shelf-label">
+        ${label}
+        <span class="shelf-count">${books.length} buku</span>
+      </div>
+      <div class="shelf-wrap">
+        <div class="book-grid">${books.map(b => buildBookCard(b)).join('')}</div>
+      </div>
+    </div>`;
+}
+
+function buildBookCard(book) {
+  const color = DDC_COLORS[book.kategori_ddc] || DDC_COLORS.default;
+  const dotClass = { tersedia:'dot-tersedia', dipinjam:'dot-dipinjam', rusak:'dot-rusak', hilang:'dot-hilang' }[book.status] || 'dot-hilang';
+
+  const coverHtml = book.cover
+    ? `<img src="${book.cover}" alt="${escHtml(book.judul)}" loading="lazy">`
+    : `<div class="book-cover-placeholder" style="background:${color}">
+         <div class="book-icon">📖</div>
+         <div>${escHtml(shortTitle(book.judul))}</div>
+       </div>`;
+
+  return `
+    <div class="book-card" onclick="openDetail(${book.id})" title="${escHtml(book.judul)}">
+      <div class="book-cover">
+        ${coverHtml}
+        <div class="book-status-dot ${dotClass}"></div>
+      </div>
+      <div class="book-title">${escHtml(book.judul)}</div>
+    </div>`;
+}
+
+// ── Detail modal ───────────────────────────────────
+async function openDetail(bookId) {
+  const book = State.books.find(b => b.id === bookId);
+  if (!book) return;
+
+  const color = DDC_COLORS[book.kategori_ddc] || DDC_COLORS.default;
+  const coverHtml = book.cover
+    ? `<img src="${book.cover}" alt="${escHtml(book.judul)}" style="width:100%;height:100%;object-fit:cover">`
+    : `<div class="detail-cover-placeholder" style="background:${color}">
+         <div class="big-icon">📖</div>
+         <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.9)">${escHtml(shortTitle(book.judul))}</div>
+       </div>`;
+
+  const statusLabels = { tersedia:'✅ Tersedia', dipinjam:'🔴 Sedang Dipinjam', rusak:'⚠️ Rusak', hilang:'❌ Hilang' };
+  const statusBadge  = { tersedia:'green', dipinjam:'orange', rusak:'red', hilang:'gray' };
+
+  document.getElementById('detail-top').innerHTML = `
+    <div class="detail-cover">${coverHtml}</div>
+    <div class="detail-info">
+      <div class="detail-title">${escHtml(book.judul)}</div>
+      <div class="detail-author">${escHtml(book.pengarang || '—')}</div>
+      <div class="detail-meta-grid">
+        <span class="detail-meta-label">Penerbit</span>
+        <span class="detail-meta-value">${escHtml(book.penerbit||'—')}</span>
+        <span class="detail-meta-label">Tahun</span>
+        <span class="detail-meta-value">${book.tahun_terbit||'—'}</span>
+        <span class="detail-meta-label">Kategori</span>
+        <span class="detail-meta-value">${DDC_LABELS[book.kategori_ddc]||book.kategori_ddc||'—'}</span>
+        <span class="detail-meta-label">Kode</span>
+        <span class="detail-meta-value" style="font-family:monospace;font-size:12px">${escHtml(book.kode_aksesi||'—')}</span>
+        <span class="detail-meta-label">Rak</span>
+        <span class="detail-meta-value">${escHtml(book.lokasi_rak||'—')}</span>
+        <span class="detail-meta-label">Status</span>
+        <span class="detail-meta-value"><span class="badge ${statusBadge[book.status]||'gray'}">${statusLabels[book.status]||book.status}</span></span>
+      </div>
+    </div>`;
+
+  const adminBtn = State.isAdmin
+    ? `<button class="btn btn-primary btn-sm" onclick="closeDetail(); openEditBookDetail(${book.id})">✏️ Edit Cover &amp; Sinopsis</button>`
+    : '';
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-synopsis-label">Sinopsis</div>
+    ${book.sinopsis
+      ? `<div class="detail-synopsis">${escHtml(book.sinopsis)}</div>`
+      : `<div class="detail-no-synopsis">Belum ada sinopsis untuk buku ini.${State.isAdmin ? ' Pustakawan dapat menambahkannya melalui tombol di bawah.' : ''}</div>`
+    }
+    ${adminBtn ? `<div class="detail-actions">${adminBtn}</div>` : ''}`;
+
+  document.getElementById('detail-backdrop').classList.remove('hidden');
+}
+
+function closeDetail() {
+  document.getElementById('detail-backdrop').classList.add('hidden');
+}
+function handleBackdropClick(e) {
+  if (e.target === document.getElementById('detail-backdrop')) closeDetail();
+}
+
+// ── Edit cover & sinopsis (pustakawan only) ─────────
+function openEditBookDetail(bookId) {
+  // Dispatch ke parent window jika dalam iframe, atau redirect ke pustakawan.html dengan param
+  // Untuk simplisitas: buka modal inline di halaman ini
+  const book = State.books.find(b => b.id === bookId);
+  if (!book) return;
+  showEditModal(book);
+}
+
+// ── Inline edit modal ──────────────────────────────
+function showEditModal(book) {
+  // Remove existing if any
+  const existing = document.getElementById('edit-modal-wrapper');
+  if (existing) existing.remove();
+
+  const color = DDC_COLORS[book.kategori_ddc] || DDC_COLORS.default;
+  const wrapper = document.createElement('div');
+  wrapper.id = 'edit-modal-wrapper';
+  wrapper.className = 'detail-modal-backdrop';
+  wrapper.style.zIndex = '500';
+  wrapper.innerHTML = `
+    <div class="detail-modal" style="max-width:460px;position:relative">
+      <button class="detail-close" onclick="document.getElementById('edit-modal-wrapper').remove()">✕</button>
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Amiri',serif;font-size:20px;font-weight:700;color:var(--green-deep);margin-bottom:2px">✏️ Edit Cover &amp; Sinopsis</div>
+        <div style="font-size:12.5px;color:var(--ink-muted)">${escHtml(book.judul)}</div>
+      </div>
+      <div style="padding:20px 24px">
+
+        <!-- Cover preview + upload -->
+        <div style="margin-bottom:18px">
+          <div style="font-size:12px;font-weight:700;color:var(--ink-mid);margin-bottom:8px">COVER BUKU</div>
+          <div style="display:flex;gap:16px;align-items:flex-start">
+            <div id="edit-cover-preview" style="width:80px;height:110px;border-radius:3px 6px 6px 3px;border-left:4px solid rgba(0,0,0,.12);overflow:hidden;box-shadow:-2px 3px 8px rgba(0,0,0,.2);flex-shrink:0">
+              ${book.cover
+                ? `<img src="${book.cover}" style="width:100%;height:100%;object-fit:cover">`
+                : `<div style="width:100%;height:100%;background:${color};display:flex;align-items:center;justify-content:center;font-size:22px">📖</div>`}
+            </div>
+            <div style="flex:1">
+              <label style="display:block;background:var(--green-pale);border:1.5px dashed var(--green-light);border-radius:8px;padding:12px;text-align:center;cursor:pointer;transition:background .2s" onmouseover="this.style.background='#d0e8da'" onmouseout="this.style.background='var(--green-pale)'">
+                <div style="font-size:18px;margin-bottom:4px">🖼️</div>
+                <div style="font-size:12px;font-weight:600;color:var(--green-dark)">Pilih Gambar</div>
+                <div style="font-size:10.5px;color:var(--ink-muted);margin-top:2px">JPG/PNG · Maks. 500 KB</div>
+                <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" id="edit-cover-input" onchange="handleCoverUpload(event, ${book.id})">
+              </label>
+              <div id="edit-cover-msg" style="font-size:11px;margin-top:6px;color:var(--ink-muted)">
+                ${book.cover ? '✅ Cover sudah ada. Upload baru untuk mengganti.' : 'Belum ada cover.'}
+              </div>
+              ${book.cover ? `<button onclick="removeCover(${book.id})" style="margin-top:6px;font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-family:inherit">🗑 Hapus cover</button>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Sinopsis -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:700;color:var(--ink-mid)">SINOPSIS</div>
+            <div id="char-count" style="font-size:11px;color:var(--ink-muted)">0 / 500</div>
+          </div>
+          <textarea id="edit-sinopsis" maxlength="500" rows="5"
+            style="width:100%;padding:10px 13px;border:1.5px solid #d8d6cf;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;outline:none;line-height:1.6;transition:border-color .2s"
+            onfocus="this.style.borderColor='var(--green-mid)'" onblur="this.style.borderColor='#d8d6cf'"
+            oninput="updateCharCount(this)"
+            placeholder="Tulis sinopsis singkat buku ini… (maks. 500 karakter)">${escHtml(book.sinopsis||'')}</textarea>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" style="flex:1" onclick="saveBookDetail(${book.id})">💾 Simpan Perubahan</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('edit-modal-wrapper').remove()">Batal</button>
+        </div>
+        <div id="edit-save-msg" style="margin-top:10px;font-size:12.5px;text-align:center"></div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(wrapper);
+  // Init char count
+  updateCharCount(document.getElementById('edit-sinopsis'));
+}
+
+function updateCharCount(textarea) {
+  const count = textarea.value.length;
+  const el = document.getElementById('char-count');
+  if (!el) return;
+  el.textContent = `${count} / 500`;
+  el.style.color = count > 450 ? 'var(--red)' : count > 350 ? 'var(--gold)' : 'var(--ink-muted)';
+}
+
+// Pending edits for the current book
+const pendingEdits = {};  // bookId -> { cover?, sinopsis? }
+
+function handleCoverUpload(event, bookId) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const msgEl = document.getElementById('edit-cover-msg');
+
+  // Size check: max 500 KB
+  if (file.size > 512 * 1024) {
+    msgEl.style.color = 'var(--red)';
+    msgEl.textContent = `❌ File terlalu besar (${(file.size/1024).toFixed(0)} KB). Maksimal 500 KB.`;
+    event.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+
+    // Update preview
+    document.getElementById('edit-cover-preview').innerHTML =
+      `<img src="${base64}" style="width:100%;height:100%;object-fit:cover">`;
+
+    msgEl.style.color = 'var(--green-dark)';
+    msgEl.textContent = `✅ ${file.name} (${(file.size/1024).toFixed(0)} KB) — siap disimpan`;
+
+    // Store in pending
+    if (!pendingEdits[bookId]) pendingEdits[bookId] = {};
+    pendingEdits[bookId].cover = base64;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeCover(bookId) {
+  if (!confirm('Hapus cover buku ini?')) return;
+  if (!pendingEdits[bookId]) pendingEdits[bookId] = {};
+  pendingEdits[bookId].cover = null;
+
+  document.getElementById('edit-cover-preview').innerHTML =
+    `<div style="width:100%;height:100%;background:${DDC_COLORS[State.books.find(b=>b.id===bookId)?.kategori_ddc]||'#4a4840'};display:flex;align-items:center;justify-content:center;font-size:22px">📖</div>`;
+  document.getElementById('edit-cover-msg').textContent = 'Cover akan dihapus saat disimpan.';
+}
+
+async function saveBookDetail(bookId) {
+  const sinopsis = document.getElementById('edit-sinopsis').value.trim();
+  const msgEl    = document.getElementById('edit-save-msg');
+
+  const updates = { sinopsis };
+  if (pendingEdits[bookId] && 'cover' in pendingEdits[bookId]) {
+    updates.cover = pendingEdits[bookId].cover;  // null = hapus, string = ganti
+  }
+
+  try {
+    msgEl.style.color = 'var(--ink-muted)';
+    msgEl.textContent = '⏳ Menyimpan…';
+
+    await dbManager.db.books.update(bookId, {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+
+    // Update local state
+    const idx = State.books.findIndex(b => b.id === bookId);
+    if (idx >= 0) Object.assign(State.books[idx], updates);
+    delete pendingEdits[bookId];
+
+    msgEl.style.color = 'var(--green-dark)';
+    msgEl.textContent = '✅ Berhasil disimpan!';
+    setTimeout(() => {
+      document.getElementById('edit-modal-wrapper')?.remove();
+      renderShelves();  // re-render to show updated cover
+    }, 900);
+  } catch(err) {
+    msgEl.style.color = 'var(--red)';
+    msgEl.textContent = '❌ Gagal: ' + err.message;
+  }
+}
+
+// ── Helpers ────────────────────────────────────────
+function shortTitle(title) {
+  return title.length > 22 ? title.slice(0, 20) + '…' : title;
+}
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function waitFor(fn, ms=8000) {
+  return new Promise((res, rej) => {
+    const t = Date.now();
+    const c = () => fn() ? res() : Date.now()-t > ms ? rej(new Error('Timeout')) : setTimeout(c, 80);
+    c();
+  });
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDetail();
+    document.getElementById('edit-modal-wrapper')?.remove();
+  }
+});
+</script>
+</body>
+</html>
