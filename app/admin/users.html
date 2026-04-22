@@ -1,254 +1,317 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen User - Admin</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-    
-    <style>
-        body { font-family: 'Nunito', sans-serif; }
-        .pin-masked { font-family: monospace; letter-spacing: 2px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manajemen User — Perpustakaan SDM01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<link rel="stylesheet" href="../../assets/design.css">
+<style>
+body { font-family: 'Plus Jakarta Sans', sans-serif; }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-    <!-- Header -->
-    <header class="bg-blue-900 text-white shadow-lg">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">👥</span>
-                <div>
-                    <h1 class="font-bold text-lg">Manajemen User</h1>
-                    <p class="text-xs text-blue-200">Admin Only</p>
-                </div>
-            </div>
-            <a href="../dashboard/pustakawan.html" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-                ← Kembali ke Dashboard
-            </a>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p>Memuat data user…</p>
+</div>
+
+<header class="topbar">
+  <a class="topbar-logo" href="../dashboard/pustakawan.html">
+    <img src="../../assets/logo.jpeg" alt="Logo SDM01">
+    <div>
+      <div class="brand-name">SDM01 Kukusan</div>
+      <div class="brand-sub">Perpustakaan Digital</div>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">⚙️ Manajemen User</div>
+  <div class="topbar-right">
+    <a href="../dashboard/pustakawan.html" class="btn-logout" style="text-decoration:none">← Dashboard</a>
+  </div>
+</header>
+
+<main class="main" style="margin-left:0;max-width:900px;margin-right:auto">
+  <div class="page-header animate-up">
+    <h1>Manajemen User</h1>
+    <p>Data user dikelola melalui Google Sheets dan langsung aktif di semua perangkat.</p>
+  </div>
+
+  <!-- Alert area -->
+  <div id="alert-area"></div>
+
+  <div class="card animate-up-d1">
+    <div class="card-header">
+      <span class="card-title">👤 Daftar User Terdaftar</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="loadUsers()">🔄 Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('panel-add').classList.toggle('hidden')">+ Tambah User</button>
+      </div>
+    </div>
+
+    <!-- Add user panel -->
+    <div id="panel-add" class="hidden" style="padding:16px;background:var(--green-ghost);border-bottom:1px solid var(--border)">
+      <p style="font-size:12px;font-weight:700;color:var(--green-dark);margin-bottom:12px">Tambah User Baru</p>
+      <div class="form-row">
+        <div>
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" id="add-nama" class="form-input" placeholder="Nama Lengkap">
         </div>
-    </header>
-
-    <!-- Main -->
-    <main class="container mx-auto px-4 py-6 max-w-4xl">
-        
-        <!-- Info Box -->
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p class="text-sm text-yellow-800">
-                <strong>🔐 Keamanan:</strong> Halaman ini hanya untuk superadmin. 
-                PIN ditampilkan dalam format terenkripsi (bisa di-toggle untuk verifikasi).
-            </p>
+        <div>
+          <label class="form-label">Email</label>
+          <input type="email" id="add-email" class="form-input" placeholder="email@sekolah.com">
         </div>
-
-        <!-- Users Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="font-bold text-lg">Daftar Pengguna</h2>
-                <button onclick="loadUsers()" class="text-blue-600 hover:text-blue-800 text-sm">
-                    🔄 Refresh
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">ID</th>
-                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Nama</th>
-                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Email/NIS</th>
-                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Role</th>
-                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">PIN</th>
-                            <th class="px-4 py-3 text-sm font-semibold text-gray-600">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-table" class="divide-y divide-gray-100">
-                        <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">Memuat data...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+        <div>
+          <label class="form-label">Role</label>
+          <select id="add-role" class="form-select">
+            <option value="pustakawan">Pustakawan</option>
+            <option value="admin">Admin</option>
+            <option value="guru">Guru</option>
+            <option value="siswa">Siswa</option>
+          </select>
         </div>
-
-        <!-- Add User Form -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
-            <h2 class="font-bold text-lg mb-4">➕ Tambah User Baru</h2>
-            
-            <form onsubmit="addUser(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                    <input type="text" name="nama" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                    <select name="role" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="pustakawan">Pustakawan</option>
-                        <option value="admin">Admin</option>
-                        <option value="siswa">Siswa</option>
-                        <option value="guru">Guru</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">PIN (6 digit)</label>
-                    <input type="text" name="pin" maxlength="6" pattern="\d{6}" placeholder="123456" required
-                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                        oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                </div>
-                
-                <div class="md:col-span-2">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
-                        Tambah User
-                    </button>
-                </div>
-            </form>
+        <div>
+          <label class="form-label">PIN (6 digit)</label>
+          <input type="tel" id="add-pin" class="form-input" placeholder="123456" maxlength="6" pattern="\d{6}">
         </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-primary btn-sm" onclick="addUser()">💾 Simpan</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('panel-add').classList.add('hidden')">Batal</button>
+      </div>
+    </div>
 
-    </main>
+    <!-- Search -->
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <input type="text" id="search-users" class="form-input" style="margin-bottom:0" placeholder="Cari nama atau email…" oninput="filterUsers()">
+    </div>
 
-    <!-- Scripts -->
-    <script src="../core/db.js"></script>
-    <script src="../core/auth.js"></script>
+    <!-- User table -->
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>PIN</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-muted)">Memuat…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
 
-    <script>
-        let currentUser = null;
-        let showPinPlain = false; // Toggle untuk tampilkan PIN asli
+<!-- Edit modal -->
+<div class="modal-backdrop hidden" id="modal-edit">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Edit User</div>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-orig-email">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" id="edit-nama" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="edit-email" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select id="edit-role" class="form-select">
+            <option value="superadmin">Superadmin</option>
+            <option value="admin">Admin</option>
+            <option value="pustakawan">Pustakawan</option>
+            <option value="guru">Guru</option>
+            <option value="siswa">Siswa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">PIN Baru (kosong = tidak diubah)</label>
+          <input type="tel" id="edit-pin" class="form-input" placeholder="6 digit angka" maxlength="6">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="edit-active" style="width:16px;height:16px;accent-color:var(--green-dark)">
+          <span>Akun Aktif</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteUser()">🗑 Hapus</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeEdit()">Batal</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            await waitForDexie();
-            await dbManager.init();
-            
-            const isLoggedIn = await authManager.init();
-            if (!isLoggedIn) {
-                window.location.href = '../../index.html';
-                return;
-            }
+<script src="../core/db.js"></script>
+<script src="../core/sheets-config.js"></script>
+<script src="../core/drive-config.js"></script>
+<script src="../core/auth.js"></script>
+<script>
+let allUsers = [];
 
-            currentUser = authManager.getCurrentUser();
-            
-            // Cek apakah admin/superadmin
-            if (currentUser.role !== 'superadmin' && currentUser.role !== 'admin') {
-                alert('Akses ditolak: Hanya untuk admin');
-                window.location.href = '../dashboard/siswa.html';
-                return;
-            }
+document.addEventListener('DOMContentLoaded', async () => {
+  await waitForDexie();
+  await dbManager.init();
+  const ok = await authManager.init();
+  if (!ok) { window.location.replace('../../index.html'); return; }
+  const u = authManager.getCurrentUser();
+  if (!u || (u.role !== 'superadmin' && u.role !== 'admin')) {
+    window.location.replace('../dashboard/pustakawan.html'); return;
+  }
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  await loadUsers();
+});
 
-            await loadUsers();
-        });
+async function loadUsers() {
+  document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-muted)">Memuat dari Google Sheets…</td></tr>';
+  try {
+    allUsers = await sheetsManager.fetchUsers();
+    await dbManager.db.users.clear();
+    if (allUsers.length > 0) await dbManager.db.users.bulkAdd(allUsers);
+    renderUsers(allUsers);
+  } catch(e) {
+    showAlert('error', 'Gagal memuat: ' + e.message);
+    document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--red)">Gagal memuat data. Pastikan koneksi internet aktif.</td></tr>';
+  }
+}
 
-        function waitForDexie() {
-            return new Promise((resolve) => {
-                if (typeof Dexie !== 'undefined') resolve();
-                else setTimeout(() => waitForDexie().then(resolve), 100);
-            });
-        }
+function renderUsers(users) {
+  if (!users.length) {
+    document.getElementById('users-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-muted)">Belum ada user terdaftar di Google Sheets.</td></tr>';
+    return;
+  }
+  const roleColors = { superadmin:'purple', admin:'blue', pustakawan:'green', guru:'gold', siswa:'gray' };
+  document.getElementById('users-tbody').innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--green-pale);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--green-dark);flex-shrink:0">${u.nama.charAt(0).toUpperCase()}</div>
+          <span style="font-weight:600">${u.nama}</span>
+        </div>
+      </td>
+      <td style="color:var(--ink-muted)">${u.email}</td>
+      <td><span class="badge ${roleColors[u.role]||'gray'}">${u.role}</span></td>
+      <td><code style="font-size:11.5px;background:#f0efed;padding:2px 7px;border-radius:5px">${u.pin ? '••••••' : '—'}</code></td>
+      <td><span class="badge ${u.is_active?'green':'red'}">${u.is_active?'Aktif':'Nonaktif'}</span></td>
+      <td><button onclick="openEdit('${u.email}')" class="btn btn-ghost btn-sm">✏️ Edit</button></td>
+    </tr>`).join('');
+}
 
-        async function loadUsers() {
-            try {
-                const users = await dbManager.db.users.toArray();
-                const tbody = document.getElementById('users-table');
-                
-                if (users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Belum ada user</td></tr>';
-                    return;
-                }
+function filterUsers() {
+  const q = document.getElementById('search-users').value.toLowerCase();
+  renderUsers(q ? allUsers.filter(u => u.nama.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) : allUsers);
+}
 
-                tbody.innerHTML = users.map(u => `
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm text-gray-900">${u.id}</td>
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900">${u.nama || '-'}</td>
-                        <td class="px-4 py-3 text-sm text-gray-600">${u.email}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${getRoleClass(u.role)}">
-                                ${u.role}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                <span class="pin-masked text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-                                    ${showPinPlain ? (u.pin || 'BELUM SET') : maskPin(u.pin)}
-                                </span>
-                                <button onclick="togglePinView()" class="text-xs text-blue-600 hover:text-blue-800" title="Toggle view">
-                                    👁️
-                                </button>
-                            </div>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                ${u.is_active ? 'Aktif' : 'Nonaktif'}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('');
-                
-            } catch (error) {
-                console.error('Gagal load users:', error);
-            }
-        }
+function openEdit(email) {
+  const u = allUsers.find(x => x.email === email);
+  if (!u) return;
+  document.getElementById('edit-orig-email').value = u.email;
+  document.getElementById('edit-nama').value  = u.nama;
+  document.getElementById('edit-email').value = u.email;
+  document.getElementById('edit-role').value  = u.role;
+  document.getElementById('edit-pin').value   = '';
+  document.getElementById('edit-active').checked = u.is_active;
+  document.getElementById('modal-edit').classList.remove('hidden');
+}
+function closeEdit() { document.getElementById('modal-edit').classList.add('hidden'); }
 
-        function maskPin(pin) {
-            if (!pin) return 'BELUM SET';
-            return '••••••';
-        }
+async function saveEdit() {
+  const orig  = document.getElementById('edit-orig-email').value;
+  const nama  = document.getElementById('edit-nama').value.trim();
+  const email = document.getElementById('edit-email').value.trim();
+  const role  = document.getElementById('edit-role').value;
+  const pin   = document.getElementById('edit-pin').value.trim();
+  const active= document.getElementById('edit-active').checked;
+  if (!nama || !email) { alert('Nama dan email wajib diisi'); return; }
+  if (pin && !/^\d{6}$/.test(pin)) { alert('PIN harus 6 digit angka'); return; }
+  try {
+    await ensureConnected();
+    const users = await sheetsManager.fetchUsers();
+    const idx = users.findIndex(u => u.email === orig);
+    if (idx === -1) { alert('User tidak ditemukan'); return; }
+    users[idx] = { ...users[idx], nama, email, role, is_active: active, ...(pin ? { pin } : {}) };
+    await sheetsManager.writeUsers(users);
+    closeEdit();
+    showAlert('success', `✅ User "${nama}" berhasil diperbarui`);
+    await loadUsers();
+  } catch(e) { alert('Gagal: ' + e.message); }
+}
 
-        function togglePinView() {
-            showPinPlain = !showPinPlain;
-            loadUsers();
-        }
+async function deleteUser() {
+  const email = document.getElementById('edit-orig-email').value;
+  const u = allUsers.find(x => x.email === email);
+  if (!u) return;
+  if (!confirm(`Hapus user "${u.nama}"?\n\nTindakan ini tidak bisa dibatalkan.`)) return;
+  if (u.role === 'superadmin') { alert('Superadmin tidak bisa dihapus.'); return; }
+  try {
+    await ensureConnected();
+    const filtered = allUsers.filter(x => x.email !== email);
+    await sheetsManager.writeUsers(filtered);
+    closeEdit();
+    showAlert('success', `✅ User "${u.nama}" berhasil dihapus`);
+    await loadUsers();
+  } catch(e) { alert('Gagal: ' + e.message); }
+}
 
-        function getRoleClass(role) {
-            const classes = {
-                'superadmin': 'bg-purple-100 text-purple-800',
-                'admin': 'bg-blue-100 text-blue-800',
-                'pustakawan': 'bg-green-100 text-green-800',
-                'guru': 'bg-yellow-100 text-yellow-800',
-                'siswa': 'bg-gray-100 text-gray-800'
-            };
-            return classes[role] || 'bg-gray-100 text-gray-800';
-        }
+async function addUser() {
+  const nama  = document.getElementById('add-nama').value.trim();
+  const email = document.getElementById('add-email').value.trim();
+  const role  = document.getElementById('add-role').value;
+  const pin   = document.getElementById('add-pin').value.trim();
+  if (!nama || !email || !pin) { alert('Semua field wajib diisi'); return; }
+  if (!/^\d{6}$/.test(pin)) { alert('PIN harus 6 digit angka'); return; }
+  try {
+    await ensureConnected();
+    const existing = await sheetsManager.fetchUsers();
+    if (existing.find(u => u.email === email)) { alert('Email sudah terdaftar'); return; }
+    const newId = existing.length > 0 ? Math.max(...existing.map(u => u.id)) + 1 : 1;
+    await sheetsManager.appendUser({ id: newId, email, nama, role, pin, is_active: true });
+    ['add-nama','add-email','add-pin'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('panel-add').classList.add('hidden');
+    showAlert('success', `✅ User "${nama}" berhasil ditambahkan`);
+    await loadUsers();
+  } catch(e) { alert('Gagal: ' + e.message); }
+}
 
-        async function addUser(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-            
-            const userData = {
-                nama: formData.get('nama'),
-                email: formData.get('email'),
-                role: formData.get('role'),
-                pin: formData.get('pin'),
-                is_active: true,
-                createdAt: new Date().toISOString(),
-                last_login: null
-            };
+async function ensureConnected() {
+  if (sheetsManager.isConnected()) return;
+  await sheetsManager.connect();
+}
 
-            try {
-                // Cek email sudah ada
-                const existing = await dbManager.db.users.where('email').equals(userData.email).first();
-                if (existing) {
-                    alert('Email sudah terdaftar!');
-                    return;
-                }
+function showAlert(type, msg) {
+  const el = document.getElementById('alert-area');
+  const icon = type === 'success' ? '✅' : '⛔';
+  el.innerHTML = `<div class="alert ${type === 'success' ? 'success' : 'error'}" style="margin-bottom:16px">
+    <div class="alert-icon">${icon}</div>
+    <div class="alert-body"><div class="alert-text">${msg}</div></div>
+  </div>`;
+  setTimeout(() => el.innerHTML = '', 4000);
+}
 
-                await dbManager.db.users.add(userData);
-                alert('✅ User berhasil ditambahkan!');
-                form.reset();
-                await loadUsers();
-                
-            } catch (error) {
-                alert('❌ Gagal: ' + error.message);
-            }
-        }
-    </script>
-
+function waitForDexie() {
+  return new Promise((res, rej) => {
+    const t = Date.now();
+    const c = () => typeof Dexie !== 'undefined' ? res() : Date.now()-t > 10000 ? rej(new Error('Timeout')) : setTimeout(c, 100);
+    c();
+  });
+}
+</script>
 </body>
 </html>
