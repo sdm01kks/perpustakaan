@@ -1,302 +1,321 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Perpustakaan - SDM01 Kukusan</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-    
-    <style>
-        body { font-family: 'Nunito', sans-serif; }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setup Pertama — Perpustakaan SDM01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green-deep: #0f3226; --green-dark: #1e4d3b; --green-mid: #2d7055;
+  --green-light: #4aa07a; --green-pale: #e5f2ec;
+  --gold: #c9882a; --white: #ffffff; --ink: #1c1b18; --ink-mid: #4a4840; --ink-muted: #7d7a72;
+  --red: #c0392b; --red-light: #fdecea; --border: rgba(30,77,59,.12);
+}
+body { font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; background: linear-gradient(160deg, var(--green-deep) 0%, #1a4a38 100%); display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+.setup-card {
+  background: #fff; border-radius: 18px;
+  width: 100%; max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  overflow: hidden;
+}
+.setup-header {
+  background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+  padding: 28px 32px; display: flex; align-items: center; gap: 14px;
+}
+.setup-header img { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,.15); padding: 4px; object-fit: contain; }
+.setup-header h1 { font-family: 'Amiri', serif; font-size: 22px; color: #fff; font-weight: 700; }
+.setup-header p { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }
+
+.setup-body { padding: 28px 32px; }
+
+/* Progress steps */
+.steps { display: flex; gap: 0; margin-bottom: 28px; }
+.step { flex: 1; text-align: center; position: relative; }
+.step::after { content: ''; position: absolute; top: 14px; left: 50%; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+.step:last-child::after { display: none; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #e0e0e0; color: #999;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; margin: 0 auto 6px;
+  position: relative; z-index: 1; transition: all .3s;
+}
+.step.active .step-dot  { background: var(--green-dark); color: #fff; }
+.step.done .step-dot    { background: var(--green-light); color: #fff; }
+.step-label { font-size: 10.5px; color: var(--ink-muted); font-weight: 600; }
+.step.active .step-label { color: var(--green-dark); }
+
+/* Form */
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-mid); margin-bottom: 6px; }
+.form-input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1.5px solid #d8d6cf; font-family: inherit; font-size: 14px;
+  color: var(--ink); outline: none; transition: all .2s; margin-bottom: 14px;
+}
+.form-input:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(45,112,85,.1); }
+.form-input.pin-field { text-align: center; letter-spacing: 10px; font-size: 20px; }
+.form-input::-webkit-input-placeholder { letter-spacing: 0; font-size: 14px; }
+
+.btn-main {
+  width: 100%; padding: 14px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+  color: #fff; font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .2s; margin-top: 4px;
+}
+.btn-main:hover { box-shadow: 0 6px 20px rgba(30,77,59,.3); transform: translateY(-1px); }
+.btn-secondary {
+  width: 100%; padding: 12px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: transparent;
+  color: var(--ink-mid); font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s; margin-top: 8px;
+}
+.btn-secondary:hover { background: var(--green-pale); border-color: var(--green-light); }
+
+.alert { background: var(--green-pale); border: 1px solid rgba(30,77,59,.15); border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--ink-mid); margin-bottom: 16px; line-height: 1.6; }
+.alert.error { background: var(--red-light); border-color: rgba(192,57,43,.2); color: var(--red); }
+
+.loading-bar { text-align: center; padding: 24px 0; display: none; }
+.spinner { width: 36px; height: 36px; border: 4px solid #e0e0e0; border-top-color: var(--green-mid); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.success-icon { font-size: 56px; text-align: center; margin-bottom: 12px; }
+</style>
 </head>
-<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+<body>
+<div class="setup-card">
+  <div class="setup-header">
+    <img src="../assets/logo.jpeg" alt="Logo SDM01">
+    <div>
+      <h1>Setup Perpustakaan</h1>
+      <p>SD Muhammadiyah 01 Kukusan — Instalasi Pertama</p>
+    </div>
+  </div>
 
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="text-3xl">⚙️</span>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800">Setup Awal Sistem</h1>
-            <p class="text-gray-600 text-sm">SD Muhammadiyah 01 Kukusan</p>
-        </div>
+  <div class="setup-body">
 
-        <!-- Step 1: Check Database -->
-        <div id="step-1" class="space-y-4">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p class="text-sm text-blue-800">
-                    <strong>Selamat datang!</strong><br>
-                    Sistem perlu diinisialisasi sebelum pertama kali digunakan.
-                </p>
-            </div>
-            
-            <button onclick="initDatabase()" id="btn-init" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all">
-                Mulai Setup
-            </button>
-        </div>
-
-        <!-- Step 2: Setup PIN -->
-        <div id="step-2" class="hidden space-y-4">
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p class="text-sm text-yellow-800">
-                    <strong>Buat PIN Superadmin</strong><br>
-                    PIN ini untuk login sebagai admin/pustakawan.
-                </p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">PIN (6 digit angka)</label>
-                <input type="password" id="pin-1" maxlength="6" placeholder="******"
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 text-center tracking-widest text-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi PIN</label>
-                <input type="password" id="pin-2" maxlength="6" placeholder="******"
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 text-center tracking-widest text-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-            </div>
-
-            <button onclick="savePin()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all">
-                Simpan PIN
-            </button>
-        </div>
-
-        <!-- Step 3: Add Sample Books -->
-        <div id="step-3" class="hidden space-y-4">
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p class="text-sm text-green-800">
-                    <strong>✅ PIN berhasil disimpan!</strong><br>
-                    Tambahkan beberapa buku contoh?
-                </p>
-            </div>
-
-            <div class="flex gap-3">
-                <button onclick="addSampleBooks()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-all">
-                    Ya, Tambah Contoh
-                </button>
-                <button onclick="finishSetup()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg transition-all">
-                    Lewati
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 4: Finish -->
-        <div id="step-4" class="hidden space-y-4 text-center">
-            <div class="text-6xl mb-4">🎉</div>
-            <h2 class="text-xl font-bold text-gray-800">Setup Selesai!</h2>
-            <p class="text-gray-600 text-sm mb-4">
-                Sistem siap digunakan. Silakan login dengan email dan PIN yang sudah dibuat.
-            </p>
-            <a href="../index.html" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all text-center">
-                Ke Halaman Login
-            </a>
-        </div>
-
-        <!-- Loading -->
-        <div id="loading" class="hidden text-center py-8">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p class="text-gray-600" id="loading-text">Memproses...</p>
-        </div>
-
-        <!-- Error -->
-        <div id="error" class="hidden mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm">
-        </div>
+    <!-- Progress -->
+    <div class="steps" id="steps-indicator">
+      <div class="step active" id="step-indicator-1">
+        <div class="step-dot">1</div>
+        <div class="step-label">Inisialisasi</div>
+      </div>
+      <div class="step" id="step-indicator-2">
+        <div class="step-dot">2</div>
+        <div class="step-label">PIN Admin</div>
+      </div>
+      <div class="step" id="step-indicator-3">
+        <div class="step-dot">3</div>
+        <div class="step-label">Data Contoh</div>
+      </div>
+      <div class="step" id="step-indicator-4">
+        <div class="step-dot">4</div>
+        <div class="step-label">Selesai</div>
+      </div>
     </div>
 
-    <script src="core/db.js"></script>
-    <script src="core/auth.js"></script>
+    <!-- Error -->
+    <div id="error-box" class="alert error" style="display:none"></div>
 
-    <script>
-        let superadminId = null;
+    <!-- Loading -->
+    <div id="loading-box" class="loading-bar">
+      <div class="spinner"></div>
+      <div style="font-size:13px;color:var(--ink-muted)" id="loading-text">Memproses…</div>
+    </div>
 
-        async function initDatabase() {
-            showLoading('Menginisialisasi database...');
-            
-            try {
-                await waitForDexie();
-                
-                // Init DB
-                const result = await dbManager.init();
-                if (!result) throw new Error('Gagal init database');
-                
-                // Cek apakah sudah ada superadmin dengan PIN
-                const superadmin = await dbManager.db.users
-                    .where('role')
-                    .equals('superadmin')
-                    .first();
-                
-                if (superadmin && superadmin.pin) {
-                    // Sudah setup, redirect ke login
-                    window.location.href = '../index.html';
-                    return;
-                }
-                
-                if (superadmin) {
-                    superadminId = superadmin.id;
-                }
-                
-                hideLoading();
-                showStep(2);
-                
-            } catch (error) {
-                hideLoading();
-                showError('Gagal: ' + error.message);
-            }
-        }
+    <!-- STEP 1: Init -->
+    <div id="step-1">
+      <div class="alert">
+        <strong>Selamat datang!</strong><br>
+        Sistem perlu diinisialisasi sebelum pertama kali digunakan.
+        Proses ini hanya dilakukan sekali dan memakan waktu beberapa detik.
+      </div>
+      <button class="btn-main" onclick="initDatabase()">🚀 Mulai Setup</button>
+    </div>
 
-        async function savePin() {
-            const pin1 = document.getElementById('pin-1').value;
-            const pin2 = document.getElementById('pin-2').value;
-            
-            if (pin1.length !== 6) {
-                showError('PIN harus 6 digit');
-                return;
-            }
-            
-            if (pin1 !== pin2) {
-                showError('PIN tidak cocok');
-                return;
-            }
-            
-            showLoading('Menyimpan PIN...');
-            
-            try {
-                if (!superadminId) {
-                    // Buat superadmin baru
-                    superadminId = await dbManager.db.users.add({
-                        email: 'arif.azwar79@gmail.com',
-                        nama: 'Arif Azwar',
-                        role: 'superadmin',
-                        pin: pin1,
-                        is_active: true,
-                        createdAt: new Date().toISOString(),
-                        last_login: null
-                    });
-                } else {
-                    // Update PIN existing
-                    await dbManager.db.users.update(superadminId, { pin: pin1 });
-                }
-                
-                hideLoading();
-                showStep(3);
-                
-            } catch (error) {
-                hideLoading();
-                showError('Gagal simpan: ' + error.message);
-            }
-        }
+    <!-- STEP 2: Email + PIN -->
+    <div id="step-2" style="display:none">
+      <div class="alert">
+        <strong>Buat Akun Superadmin</strong><br>
+        Isi email, nama, dan PIN yang akan digunakan untuk login sebagai administrator.
+      </div>
+      <label class="form-label">Email Akun Admin *</label>
+      <input type="email" id="inp-email" class="form-input" placeholder="email@domain.com">
+      <label class="form-label">Nama Lengkap *</label>
+      <input type="text" id="inp-nama" class="form-input" placeholder="Nama Lengkap">
+      <label class="form-label">PIN Baru (6 digit angka) *</label>
+      <input type="password" id="pin-1" class="form-input pin-field" maxlength="6" placeholder="••••••" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <label class="form-label">Konfirmasi PIN *</label>
+      <input type="password" id="pin-2" class="form-input pin-field" maxlength="6" placeholder="••••••" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <button class="btn-main" onclick="savePin()">🔐 Simpan Akun Admin</button>
+    </div>
 
-        async function addSampleBooks() {
-            showLoading('Menambah buku contoh...');
-            
-            const sampleBooks = [
-                {
-                    judul: 'Matematika untuk SD Kelas 4',
-                    pengarang: 'Tim Erlangga',
-                    penerbit: 'Erlangga',
-                    tahun_terbit: 2024,
-                    kategori_ddc: '500',
-                    lokasi_rak: 'Rak A-1',
-                    isbn: '978-602-1234-01'
-                },
-                {
-                    judul: 'Dongeng Si Kancil dan Buaya',
-                    pengarang: 'Riri Khasmita',
-                    penerbit: 'Gramedia',
-                    tahun_terbit: 2023,
-                    kategori_ddc: 'F',
-                    lokasi_rak: 'Rak B-2',
-                    isbn: null
-                },
-                {
-                    judul: 'Pendidikan Agama Islam Kelas 3',
-                    pengarang: 'Ahmad Syafi\'i',
-                    penerbit: 'Bumi Aksara',
-                    tahun_terbit: 2024,
-                    kategori_ddc: '200',
-                    lokasi_rak: 'Rak C-1',
-                    isbn: '978-602-1234-03'
-                },
-                {
-                    judul: 'Ensiklopedia Anak Indonesia',
-                    pengarang: 'Tim Redaksi',
-                    penerbit: 'Kawan Pustaka',
-                    tahun_terbit: 2023,
-                    kategori_ddc: '000',
-                    lokasi_rak: 'Rak R-1',
-                    isbn: null
-                },
-                {
-                    judul: 'Bahasa Indonesia untuk SD',
-                    pengarang: 'Siti Nurjanah',
-                    penerbit: 'Yudhistira',
-                    tahun_terbit: 2024,
-                    kategori_ddc: '400',
-                    lokasi_rak: 'Rak A-2',
-                    isbn: '978-602-1234-05'
-                }
-            ];
-            
-            try {
-                for (const book of sampleBooks) {
-                    await dbManager.addBook(book);
-                }
-                
-                hideLoading();
-                showStep(4);
-                
-            } catch (error) {
-                hideLoading();
-                showError('Gagal tambah buku: ' + error.message);
-            }
-        }
+    <!-- STEP 3: Sample data -->
+    <div id="step-3" style="display:none">
+      <div class="alert">
+        <strong>✅ PIN berhasil disimpan!</strong><br>
+        Ingin menambahkan beberapa buku contoh untuk memulai?
+        Buku contoh dapat dihapus kapan saja.
+      </div>
+      <button class="btn-main" onclick="addSampleBooks()">📚 Ya, Tambah Buku Contoh</button>
+      <button class="btn-secondary" onclick="finishSetup()">Lewati →</button>
+    </div>
 
-        function finishSetup() {
-            showStep(4);
-        }
+    <!-- STEP 4: Done -->
+    <div id="step-4" style="display:none">
+      <div class="success-icon">🎉</div>
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-family:'Amiri',serif;font-size:22px;color:var(--green-deep);font-weight:700;margin-bottom:8px">Setup Selesai!</div>
+        <div style="font-size:13px;color:var(--ink-muted);line-height:1.6">
+          Sistem perpustakaan siap digunakan.<br>
+          Login menggunakan email dan PIN yang sudah dibuat.
+        </div>
+      </div>
+      <a href="../index.html" class="btn-main" style="display:block;text-align:center;text-decoration:none">
+        Masuk ke Dashboard →
+      </a>
+    </div>
 
-        function waitForDexie() {
-            return new Promise((resolve) => {
-                if (typeof Dexie !== 'undefined') resolve();
-                else setTimeout(() => waitForDexie().then(resolve), 100);
-            });
-        }
+  </div>
+</div>
 
-        function showStep(step) {
-            document.getElementById('step-1').classList.add('hidden');
-            document.getElementById('step-2').classList.add('hidden');
-            document.getElementById('step-3').classList.add('hidden');
-            document.getElementById('step-4').classList.add('hidden');
-            
-            document.getElementById('step-' + step).classList.remove('hidden');
-        }
+<script src="core/db.js"></script>
+<script src="core/auth.js"></script>
+<script>
+let superadminId = null;
 
-        function showLoading(text) {
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('loading-text').textContent = text;
-            
-            ['step-1', 'step-2', 'step-3', 'step-4'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-        }
+async function initDatabase() {
+  showLoading('Menginisialisasi database…');
+  try {
+    await waitForDexie();
+    const result = await dbManager.init();
+    if (!result) throw new Error('Gagal inisialisasi database');
 
-        function hideLoading() {
-            document.getElementById('loading').classList.add('hidden');
-        }
+    // Cek apakah sudah ada superadmin — tapi JANGAN redirect, biarkan user tetap bisa setup ulang
+    const existing = await dbManager.db.users.where('role').equals('superadmin').first();
+    if (existing) {
+      superadminId = existing.id;
+      // Pre-fill email jika sudah ada
+      if (existing.email) {
+        document.getElementById('inp-email').value = existing.email;
+      }
+      if (existing.nama) {
+        document.getElementById('inp-nama').value = existing.nama;
+      }
+    }
 
-        function showError(msg) {
-            const el = document.getElementById('error');
-            el.textContent = msg;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 5000);
-        }
-    </script>
+    hideLoading();
+    showStep(2);
+    updateIndicator(2);
+  } catch(err) {
+    hideLoading();
+    showError('Gagal: ' + err.message);
+  }
+}
 
+async function savePin() {
+  const email = document.getElementById('inp-email').value.trim();
+  const nama  = document.getElementById('inp-nama').value.trim();
+  const p1    = document.getElementById('pin-1').value;
+  const p2    = document.getElementById('pin-2').value;
+
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) { showError('Email tidak valid'); return; }
+  if (!nama)  { showError('Nama tidak boleh kosong'); return; }
+  if (p1.length !== 6 || !/^\d{6}$/.test(p1)) { showError('PIN harus tepat 6 digit angka'); return; }
+  if (p1 !== p2) { showError('PIN tidak cocok. Coba lagi.'); return; }
+
+  showLoading('Menyimpan akun admin…');
+  try {
+    if (superadminId) {
+      await dbManager.db.users.update(superadminId, { email, nama, pin: p1, is_active: true });
+    } else {
+      await dbManager.db.users.add({
+        email, nama,
+        role: 'superadmin',
+        pin: p1,
+        is_active: true,
+        createdAt: new Date().toISOString(),
+        last_login: null
+      });
+    }
+    // Buat sesi langsung agar bisa langsung masuk setelah setup
+    const user = { email, nama, role: 'superadmin', pin: p1, is_active: true };
+    localStorage.setItem('perpustakaan_session', JSON.stringify(user));
+    hideLoading();
+    showStep(3);
+    updateIndicator(3);
+  } catch(err) {
+    hideLoading();
+    showError('Gagal menyimpan: ' + err.message);
+  }
+}
+
+async function addSampleBooks() {
+  showLoading('Menambah buku contoh…');
+  const sampleBooks = [
+    { judul:'Matematika untuk SD Kelas 4', pengarang:'Tim Erlangga', penerbit:'Erlangga', tahun_terbit:2024, kategori_ddc:'500', lokasi_rak:'Rak A-1', isbn:'978-602-1234-01' },
+    { judul:'Dongeng Si Kancil dan Buaya', pengarang:'Riri Khasmita', penerbit:'Gramedia', tahun_terbit:2023, kategori_ddc:'F', lokasi_rak:'Rak B-2', isbn:null },
+    { judul:"Pendidikan Agama Islam Kelas 3", pengarang:"Ahmad Syafi'i", penerbit:'Bumi Aksara', tahun_terbit:2024, kategori_ddc:'200', lokasi_rak:'Rak C-1', isbn:'978-602-1234-03' },
+    { judul:'Ensiklopedia Anak Indonesia', pengarang:'Tim Redaksi', penerbit:'Kawan Pustaka', tahun_terbit:2023, kategori_ddc:'000', lokasi_rak:'Rak R-1', isbn:null },
+    { judul:'Bahasa Indonesia untuk SD', pengarang:'Siti Nurjanah', penerbit:'Yudhistira', tahun_terbit:2024, kategori_ddc:'400', lokasi_rak:'Rak A-2', isbn:'978-602-1234-05' },
+    { judul:'Sains Asyik untuk Anak', pengarang:'Budi Santoso', penerbit:'Tiga Serangkai', tahun_terbit:2023, kategori_ddc:'500', lokasi_rak:'Rak A-3', isbn:null },
+  ];
+  try {
+    for (const book of sampleBooks) await dbManager.addBook(book);
+    hideLoading();
+    finishSetup();
+  } catch(err) {
+    hideLoading();
+    showError('Gagal tambah buku: ' + err.message);
+  }
+}
+
+function finishSetup() {
+  showStep(4);
+  updateIndicator(4);
+}
+
+function showStep(n) {
+  [1,2,3,4].forEach(i => document.getElementById('step-'+i).style.display = 'none');
+  document.getElementById('step-'+n).style.display = '';
+}
+
+function updateIndicator(activeStep) {
+  [1,2,3,4].forEach(i => {
+    const el = document.getElementById('step-indicator-'+i);
+    el.className = 'step' + (i === activeStep ? ' active' : i < activeStep ? ' done' : '');
+    el.querySelector('.step-dot').textContent = i < activeStep ? '✓' : i;
+  });
+}
+
+function showLoading(t) {
+  [1,2,3,4].forEach(i => document.getElementById('step-'+i).style.display = 'none');
+  document.getElementById('loading-box').style.display = 'block';
+  document.getElementById('loading-text').textContent = t;
+}
+function hideLoading() { document.getElementById('loading-box').style.display = 'none'; }
+function showError(m) {
+  const el = document.getElementById('error-box');
+  el.textContent = m; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function waitForDexie() {
+  return new Promise((res, rej) => {
+    const t = Date.now();
+    const c = () => typeof Dexie !== 'undefined' ? res() : Date.now()-t > 10000 ? rej(new Error('Timeout')) : setTimeout(c, 100);
+    c();
+  });
+}
+
+// Auto-start
+document.addEventListener('DOMContentLoaded', () => {
+  // Don't auto-init, wait for user click
+});
+</script>
 </body>
 </html>
