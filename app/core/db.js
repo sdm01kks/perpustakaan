@@ -8,12 +8,12 @@
 // Konfigurasi Database
 const DB_CONFIG = {
     name: 'PerpustakaanSDM01',
-    version: 1
+    version: 2  // v2: tambah field cover & sinopsis pada tabel books
 };
 
 // Schema Tabel
 const DB_SCHEMA = {
-    // Tabel Buku
+    // Tabel Buku — cover (base64 string) & sinopsis tidak diindeks (terlalu besar)
     books: '++id, kode_aksesi, judul, pengarang, penerbit, tahun_terbit, kategori_ddc, lokasi_rak, status, createdAt, updatedAt',
     
     // Tabel Anggota
@@ -49,8 +49,18 @@ class DatabaseManager {
             }
 
             this.db = new Dexie(DB_CONFIG.name);
-            this.db.version(DB_CONFIG.version).stores(DB_SCHEMA);
-            
+            // v1: schema awal
+            this.db.version(1).stores({
+                books:       '++id, kode_aksesi, judul, pengarang, penerbit, tahun_terbit, kategori_ddc, lokasi_rak, status, createdAt, updatedAt',
+                members:     '++id, nis, nama_lengkap, tipe_anggota, kelas, no_hp, email_ortu, status, createdAt, updatedAt',
+                circulation: '++id, book_id, member_id, borrow_date, due_date, return_date, status, denda, createdAt, updatedAt',
+                users:       '++id, email, nama, role, pin, is_active, createdAt, last_login',
+                settings:    'key, value',
+                syncQueue:   '++id, table_name, action, data, timestamp, status'
+            });
+            // v2: cover & sinopsis (tidak perlu migrasi data, field baru optional)
+            this.db.version(2).stores(DB_SCHEMA);
+
             // Open database
             await this.db.open();
             this.isReady = true;
