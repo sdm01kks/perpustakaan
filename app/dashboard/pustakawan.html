@@ -1027,7 +1027,7 @@
                             <div class="loan-title">${item.book?.judul || '—'}</div>
                             <div class="loan-meta">${item.member?.nama_lengkap || '—'} · ${item.member?.kelas || '—'}</div>
                         </div>
-                        <div class="loan-due ${isOverdue?'late'}">${isOverdue?'⚠️ ':''}${dueDate.toLocaleDateString('id-ID')}</div>
+                        <div class="loan-due ${isOverdue?'late':''}">${isOverdue?'⚠️ ':''}${dueDate.toLocaleDateString('id-ID')}</div>
                     </div>`;
                 }).join('');
             } catch (error) { console.error('Load loans error:', error); }
