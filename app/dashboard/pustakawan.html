@@ -1281,7 +1281,7 @@
                         } catch(e) { fail++; }
                     }
                 }
-                document.getElementById(`modal-import-${type}s`).classList.add('hidden');
+                document.getElementById('modal-import-' + (type === 'books' ? 'books' : 'members')).classList.add('hidden');
                 showToast(`✅ Import selesai: ${success} berhasil, ${fail} gagal/duplikat`, 'success');
                 type === 'books' ? loadBooks() : loadMembers();
                 loadDashboardStats();
