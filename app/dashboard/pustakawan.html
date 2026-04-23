@@ -200,6 +200,7 @@
           <button class="btn btn-ghost btn-sm" onclick="downloadTemplate('xlsx')" title="Download template Excel untuk import buku">📋 Template</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-import-books').classList.remove('hidden')">📥 Import</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('add-book')">+ Tambah Buku</button>
+          <button class="btn btn-danger btn-sm" id="btn-delete-all-books" style="display:none" onclick="deleteAllBooks()" title="Hapus semua buku (superadmin only)">🗑 Hapus Semua</button>
         </div>
       </div>
       <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
@@ -497,6 +498,74 @@
 </div>
 
 <!-- ── MODAL: IMPORT BUKU ─────────────────────────── -->
+<!-- ── MODAL: EDIT BUKU ────────────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-edit-book">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Edit Data Buku</div>
+      <button class="modal-close" onclick="closeModal('edit-book')">✕</button>
+    </div>
+    <form class="modal-body" onsubmit="saveEditBook(event)">
+      <input type="hidden" id="edit-book-id">
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Judul Buku *</label>
+          <input id="edit-book-judul" type="text" class="form-input" required placeholder="Judul lengkap buku">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pengarang *</label>
+          <input id="edit-book-pengarang" type="text" class="form-input" required placeholder="Nama pengarang">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penerbit</label>
+          <input id="edit-book-penerbit" type="text" class="form-input" placeholder="Nama penerbit">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tahun Terbit</label>
+          <input id="edit-book-tahun" type="number" class="form-input" placeholder="2024" min="1900" max="2099">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori DDC</label>
+          <select id="edit-book-ddc" class="form-select">
+            <option value="000">000 – Karya Umum</option>
+            <option value="100">100 – Filsafat</option>
+            <option value="200">200 – Agama</option>
+            <option value="300">300 – Ilmu Sosial</option>
+            <option value="400">400 – Bahasa</option>
+            <option value="500">500 – Sains</option>
+            <option value="600">600 – Teknologi</option>
+            <option value="700">700 – Seni</option>
+            <option value="800">800 – Sastra</option>
+            <option value="900">900 – Sejarah</option>
+            <option value="F">F – Fiksi / Cerita</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lokasi Rak</label>
+          <input id="edit-book-rak" type="text" class="form-input" placeholder="mis. Rak A-1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ISBN</label>
+          <input id="edit-book-isbn" type="text" class="form-input" placeholder="ISBN (opsional)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="edit-book-status" class="form-select">
+            <option value="tersedia">Tersedia</option>
+            <option value="dipinjam">Dipinjam</option>
+            <option value="rusak">Rusak</option>
+            <option value="hilang">Hilang</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('edit-book')">Batal</button>
+        <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="modal-backdrop hidden" id="modal-import-books">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
@@ -619,6 +688,13 @@
             document.getElementById('user-name').textContent  = nama;
             document.getElementById('user-role').textContent  = AppState.currentUser.role;
             document.getElementById('user-avatar').textContent = nama.charAt(0).toUpperCase();
+
+            // Tombol hapus semua hanya untuk superadmin/admin
+            const role = AppState.currentUser.role;
+            if (role === 'superadmin' || role === 'admin') {
+                const btnDel = document.getElementById('btn-delete-all-books');
+                if (btnDel) btnDel.style.display = '';
+            }
             
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('current-date').textContent = '📅 ' + new Date().toLocaleDateString('id-ID', options);
@@ -859,9 +935,10 @@
                     <td><span class="badge blue">${book.kategori_ddc}</span></td>
                     <td><span class="badge ${getStatusBadge(book.status)}">${book.status}</span></td>
                     <td style="white-space:nowrap">
-                        <button onclick="openEditBookMeta(${book.id})" class="btn btn-ghost btn-sm" title="Edit Cover & Sinopsis" style="margin-right:2px">🖼️</button>
+                        <button onclick="openEditBook(${book.id})" class="btn btn-ghost btn-sm" title="Edit Buku">✏️</button>
+                        <button onclick="openEditBookMeta(${book.id})" class="btn btn-ghost btn-sm" title="Cover & Sinopsis">🖼️</button>
                         <button onclick="printBookQR(${book.id})" class="btn btn-ghost btn-sm" title="Cetak QR">🖨️</button>
-                        <button onclick="deleteBook(${book.id})" class="btn btn-ghost btn-sm" title="Hapus" style="margin-left:4px">🗑️</button>
+                        <button onclick="deleteBook(${book.id})" class="btn btn-ghost btn-sm" title="Hapus">🗑️</button>
                     </td>
                 </tr>`).join('');
         }
@@ -982,23 +1059,111 @@
 
         // ── DELETE ────────────────────────────────────────
         async function deleteBook(id) {
+            id = parseInt(id);
             if (!confirm('Yakin ingin menghapus buku ini?')) return;
             try {
-                await dbManager.deleteBook(id);
-                await loadBooks();
+                await dbManager.db.books.delete(id);
+                // Update AppState langsung agar tidak perlu reload penuh
+                AppState.allBooks = AppState.allBooks.filter(b => b.id !== id);
+                renderBooksTable(AppState.allBooks);
                 await loadDashboardStats();
-                showToast('✅ Buku dihapus', 'success');
-            } catch (error) { alert('Gagal menghapus: ' + error.message); }
+                await loadRecentLoans();
+                showToast('✅ Buku berhasil dihapus', 'success');
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Gagal menghapus: ' + error.message);
+            }
         }
 
         async function deleteMember(id) {
+            id = parseInt(id);
             if (!confirm('Yakin ingin menghapus anggota ini?')) return;
             try {
                 await dbManager.db.members.delete(id);
-                await loadMembers();
+                AppState.allMembers = AppState.allMembers.filter(m => m.id !== id);
+                renderMembersTable(AppState.allMembers);
                 await loadDashboardStats();
-                showToast('✅ Anggota dihapus', 'success');
+                showToast('✅ Anggota berhasil dihapus', 'success');
             } catch (error) { alert('Gagal menghapus: ' + error.message); }
+        }
+
+        // ── EDIT BUKU (data lengkap) ──────────────────────
+        function openEditBook(id) {
+            id = parseInt(id);
+            const book = AppState.allBooks.find(b => b.id === id);
+            if (!book) { alert('Buku tidak ditemukan di daftar. Coba refresh halaman.'); return; }
+
+            document.getElementById('edit-book-id').value       = book.id;
+            document.getElementById('edit-book-judul').value    = book.judul        || '';
+            document.getElementById('edit-book-pengarang').value= book.pengarang    || '';
+            document.getElementById('edit-book-penerbit').value = book.penerbit     || '';
+            document.getElementById('edit-book-tahun').value    = book.tahun_terbit || '';
+            document.getElementById('edit-book-ddc').value      = book.kategori_ddc || '000';
+            document.getElementById('edit-book-rak').value      = book.lokasi_rak   || '';
+            document.getElementById('edit-book-isbn').value     = book.isbn         || '';
+            document.getElementById('edit-book-status').value   = book.status       || 'tersedia';
+
+            openModal('edit-book');
+        }
+
+        async function saveEditBook(event) {
+            event.preventDefault();
+            const id = parseInt(document.getElementById('edit-book-id').value);
+            const updates = {
+                judul:         document.getElementById('edit-book-judul').value.trim(),
+                pengarang:     document.getElementById('edit-book-pengarang').value.trim(),
+                penerbit:      document.getElementById('edit-book-penerbit').value.trim(),
+                tahun_terbit:  parseInt(document.getElementById('edit-book-tahun').value) || 0,
+                kategori_ddc:  document.getElementById('edit-book-ddc').value,
+                lokasi_rak:    document.getElementById('edit-book-rak').value.trim(),
+                isbn:          document.getElementById('edit-book-isbn').value.trim() || null,
+                status:        document.getElementById('edit-book-status').value,
+                updatedAt:     new Date().toISOString()
+            };
+            try {
+                await dbManager.db.books.update(id, updates);
+                // Update AppState langsung
+                const idx = AppState.allBooks.findIndex(b => b.id === id);
+                if (idx >= 0) Object.assign(AppState.allBooks[idx], updates);
+                renderBooksTable(AppState.allBooks);
+                closeModal('edit-book');
+                showToast('✅ Buku berhasil diperbarui', 'success');
+            } catch(err) { alert('Gagal menyimpan: ' + err.message); }
+        }
+
+        // ── HAPUS SEMUA / BULK DELETE (superadmin only) ───
+        async function deleteAllBooks() {
+            const user = AppState.currentUser;
+            if (!user || (user.role !== 'superadmin' && user.role !== 'admin')) {
+                alert('Fitur ini hanya tersedia untuk Superadmin/Admin.'); return;
+            }
+            const jumlah = AppState.allBooks.length;
+            if (jumlah === 0) { showToast('Tidak ada buku untuk dihapus', ''); return; }
+            const confirm1 = confirm(
+                `⚠️ HAPUS SEMUA BUKU
+
+` +
+                `Anda akan menghapus ${jumlah} buku secara permanen.
+` +
+                `Tindakan ini TIDAK BISA dibatalkan.
+
+Lanjutkan?`
+            );
+            if (!confirm1) return;
+            const confirm2 = prompt(
+                `Konfirmasi terakhir.
+Ketik HAPUS SEMUA untuk melanjutkan:`
+            );
+            if (confirm2 !== 'HAPUS SEMUA') {
+                showToast('Dibatalkan — teks konfirmasi tidak sesuai', ''); return;
+            }
+            try {
+                await dbManager.db.books.clear();
+                AppState.allBooks = [];
+                renderBooksTable([]);
+                await loadDashboardStats();
+                showToast(`✅ ${jumlah} buku telah dihapus`, 'success');
+            } catch(err) { alert('Gagal: ' + err.message); }
         }
 
         // ── QR & PRINT ────────────────────────────────────
@@ -1083,11 +1248,12 @@
                 return;
             }
 
-            // Header row
-            const headers = ['judul','pengarang','penerbit','tahun_terbit','kategori_ddc','lokasi_rak','isbn'];
-            const headerLabels = ['Judul Buku *','Pengarang *','Penerbit','Tahun Terbit','Kategori DDC','Lokasi Rak','ISBN'];
+            // Header row — PENTING: nama kolom HARUS sama persis dengan nama field
+            // agar import bisa membaca data dengan benar
+            const fieldNames   = ['judul','pengarang','penerbit','tahun_terbit','kategori_ddc','lokasi_rak','isbn'];
+            const fieldLabels  = ['Judul Buku (WAJIB)','Pengarang (WAJIB)','Penerbit','Tahun Terbit','Kategori DDC','Lokasi Rak','ISBN'];
 
-            // Contoh data
+            // Contoh data (hapus baris ini sebelum import)
             const examples = [
                 ['Matematika Kelas 4','Tim Erlangga','Erlangga',2024,'500','Rak A-1','978-602-1234-01'],
                 ['Dongeng Si Kancil','Riri Khasmita','Gramedia',2023,'F','Rak B-2',''],
@@ -1099,7 +1265,8 @@
             const wb = XLSX.utils.book_new();
 
             // ── Sheet 1: Template ──────────────────────────────
-            const wsData = [headerLabels, ...examples];
+            // Baris 1: nama field (jangan diubah!) · Baris 2: keterangan · Baris 3+: data
+            const wsData = [fieldNames, fieldLabels, ...examples];
             const ws = XLSX.utils.aoa_to_sheet(wsData);
 
             // Lebar kolom
@@ -1258,34 +1425,113 @@
             file.name.endsWith('.csv') ? reader.readAsText(file) : reader.readAsArrayBuffer(file);
         }
 
+        // Normalisasi nama kolom — mapping dari berbagai variasi ke nama field standar
+        function _normalizeRow(raw) {
+            // Buat peta dari semua kemungkinan nama kolom ke nama field standar
+            const BOOK_MAP = {
+                'judul': 'judul', 'judul buku': 'judul', 'judul buku (wajib)': 'judul', 'title': 'judul',
+                'pengarang': 'pengarang', 'pengarang (wajib)': 'pengarang', 'author': 'pengarang', 'penulis': 'pengarang',
+                'penerbit': 'penerbit', 'publisher': 'penerbit',
+                'tahun_terbit': 'tahun_terbit', 'tahun terbit': 'tahun_terbit', 'tahun': 'tahun_terbit', 'year': 'tahun_terbit',
+                'kategori_ddc': 'kategori_ddc', 'kategori ddc': 'kategori_ddc', 'ddc': 'kategori_ddc', 'kategori': 'kategori_ddc',
+                'lokasi_rak': 'lokasi_rak', 'lokasi rak': 'lokasi_rak', 'rak': 'lokasi_rak', 'lokasi': 'lokasi_rak',
+                'isbn': 'isbn',
+            };
+            const MEMBER_MAP = {
+                'nis': 'nis', 'nomor induk': 'nis',
+                'nama_lengkap': 'nama_lengkap', 'nama lengkap': 'nama_lengkap', 'nama': 'nama_lengkap', 'name': 'nama_lengkap',
+                'kelas': 'kelas', 'class': 'kelas',
+                'no_hp': 'no_hp', 'no hp': 'no_hp', 'hp': 'no_hp', 'telp': 'no_hp', 'phone': 'no_hp',
+                'email_ortu': 'email_ortu', 'email ortu': 'email_ortu', 'email': 'email_ortu',
+            };
+            const map = importType === 'books' ? BOOK_MAP : MEMBER_MAP;
+            const out = {};
+            Object.keys(raw).forEach(k => {
+                const normalized = k.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[*()]/g, '').trim();
+                const fieldName  = map[normalized] || normalized;
+                out[fieldName]   = raw[k];
+            });
+            return out;
+        }
+
         async function executeImport(type) {
-            if (!importData || importData.length === 0) { alert('Tidak ada data untuk diimport. Pilih file terlebih dahulu.'); return; }
-            if (!confirm(`Import ${importData.length} ${type === 'books' ? 'buku' : 'anggota'}? Data yang sudah ada tidak akan terhapus.`)) return;
+            if (!importData || importData.length === 0) {
+                alert('Tidak ada data untuk diimport. Pilih file terlebih dahulu.'); return;
+            }
+            // Filter baris kosong (semua nilai kosong)
+            const validRows = importData.filter(row => Object.values(row).some(v => v && String(v).trim()));
+            if (validRows.length === 0) { alert('Semua baris kosong atau tidak ada data.'); return; }
+
+            if (!confirm(`Import ${validRows.length} ${type === 'books' ? 'buku' : 'anggota'}?\n\nData yang sudah ada tidak akan terhapus.`)) return;
+
+            const modalId = type === 'books' ? 'modal-import-books' : 'modal-import-members';
             try {
-                let success = 0, fail = 0;
+                let success = 0, fail = 0, errors = [];
                 if (type === 'books') {
-                    for (const row of importData) {
+                    for (const rawRow of validRows) {
+                        const row = _normalizeRow(rawRow);
+                        const judul = String(row.judul || '').trim();
+                        if (!judul) { fail++; errors.push('Baris tanpa judul dilewati'); continue; }
                         try {
-                            await dbManager.addBook({ judul: row.judul||row['judul'], pengarang: row.pengarang||'—', penerbit: row.penerbit||'', tahun_terbit: parseInt(row.tahun_terbit)||0, kategori_ddc: row.kategori_ddc||'000', lokasi_rak: row.lokasi_rak||'', isbn: row.isbn||null });
+                            await dbManager.addBook({
+                                judul:          judul,
+                                pengarang:      String(row.pengarang || '').trim() || '—',
+                                penerbit:       String(row.penerbit  || '').trim(),
+                                tahun_terbit:   parseInt(row.tahun_terbit) || 0,
+                                kategori_ddc:   String(row.kategori_ddc || '').trim() || '000',
+                                lokasi_rak:     String(row.lokasi_rak || '').trim(),
+                                isbn:           String(row.isbn || '').trim() || null,
+                            });
                             success++;
-                        } catch(e) { fail++; }
+                        } catch(e) { fail++; errors.push(e.message); }
                     }
                 } else {
-                    for (const row of importData) {
+                    for (const rawRow of validRows) {
+                        const row = _normalizeRow(rawRow);
+                        const nis = String(row.nis || '').trim();
+                        if (!nis) { fail++; continue; }
                         try {
-                            const existing = await dbManager.db.members.where('nis').equals(String(row.nis||'')).first();
+                            const existing = await dbManager.db.members.where('nis').equals(nis).first();
                             if (!existing) {
-                                await dbManager.addMember({ nis: String(row.nis||''), nama_lengkap: row.nama_lengkap||row['nama_lengkap']||'—', kelas: row.kelas||'', no_hp: row.no_hp||null, email_ortu: row.email_ortu||null, tipe_anggota: 'siswa', status: 'aktif' });
+                                await dbManager.addMember({
+                                    nis,
+                                    nama_lengkap: String(row.nama_lengkap || '').trim() || '—',
+                                    kelas:        String(row.kelas || '').trim(),
+                                    no_hp:        String(row.no_hp || '').trim() || null,
+                                    email_ortu:   String(row.email_ortu || '').trim() || null,
+                                    tipe_anggota: 'siswa',
+                                    status:       'aktif'
+                                });
                                 success++;
                             } else { fail++; }
-                        } catch(e) { fail++; }
+                        } catch(e) { fail++; errors.push(e.message); }
                     }
                 }
-                document.getElementById('modal-import-' + (type === 'books' ? 'books' : 'members')).classList.add('hidden');
-                showToast(`✅ Import selesai: ${success} berhasil, ${fail} gagal/duplikat`, 'success');
-                type === 'books' ? loadBooks() : loadMembers();
-                loadDashboardStats();
-            } catch(err) { alert('Error import: ' + err.message); }
+
+                const modal = document.getElementById(modalId);
+                if (modal) modal.classList.add('hidden');
+
+                if (success > 0) {
+                    showToast(`✅ Import selesai: ${success} berhasil${fail > 0 ? ', ' + fail + ' gagal/dilewati' : ''}`, 'success');
+                } else {
+                    showToast(`⚠️ Import selesai tanpa data berhasil. ${fail} baris gagal/dilewati.`, 'error');
+                    if (errors.length > 0) console.warn('Import errors:', errors.slice(0, 5));
+                }
+
+                if (type === 'books') { await loadBooks(); } else { await loadMembers(); }
+                await loadDashboardStats();
+
+                // Reset import state
+                importData = [];
+                const fileInput = document.getElementById(`import-${type}-file`);
+                if (fileInput) fileInput.value = '';
+                const previewDiv = document.getElementById(`import-${type}-preview`);
+                if (previewDiv) previewDiv.innerHTML = '';
+
+            } catch(err) {
+                console.error('Import error:', err);
+                alert('Error import: ' + err.message);
+            }
         }
 
         // ── EDIT COVER & SINOPSIS ─────────────────────────
