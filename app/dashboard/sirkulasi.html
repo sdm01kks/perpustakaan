@@ -9,65 +9,213 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
 <link rel="stylesheet" href="../../assets/design.css">
 <style>
-body { font-family: 'Plus Jakarta Sans', sans-serif; }
-.circ-header {
-  position:sticky; top:0; z-index:50;
-  background:#fff; border-bottom:1px solid var(--border);
-  padding:0; display:flex;
-}
-.circ-tab {
-  flex:1; padding:16px; font-family:inherit; font-size:14px; font-weight:600;
-  cursor:pointer; border:none; background:none; transition:all .2s;
-  color:var(--ink-muted); border-bottom:3px solid transparent;
-}
-.circ-tab.active { color:var(--green-dark); border-bottom-color:var(--green-dark); }
-.circ-form { padding:24px; display:none; }
-.circ-form.active { display:block; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f2f4f2; }
 
-.found-card {
-  background:var(--green-ghost); border:1px solid rgba(30,77,59,.15);
-  border-radius:10px; padding:14px 16px;
-  display:flex; align-items:center; gap:12px; margin-top:10px;
+/* ── Tab bar ────────────────────────────────────── */
+.tab-bar {
+  display: flex; background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: var(--topbar-h); z-index: 90;
 }
-.found-card.not-available { background:var(--red-light); border-color:rgba(192,57,43,.2); }
-.found-avatar { width:40px;height:40px;border-radius:50%;background:var(--green-pale);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
-.found-name { font-weight:700;font-size:13px;color:var(--ink); }
-.found-meta { font-size:11.5px;color:var(--ink-muted);margin-top:2px; }
+.tab-btn {
+  flex: 1; padding: 15px 12px; border: none; background: none;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; color: var(--ink-muted);
+  border-bottom: 3px solid transparent; transition: all .2s;
+}
+.tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green-dark); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-.loan-confirm {
-  border:1px solid var(--border); border-radius:10px;
-  padding:16px; margin-top:16px; background:#fff;
-  display:none;
+/* ── Scan cepat bar ────────────────────────────── */
+.scan-bar {
+  background: var(--green-dark); padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
 }
-.loan-confirm.visible { display:block; }
+.scan-bar-label {
+  font-size: 12px; font-weight: 700; color: rgba(255,255,255,.8);
+  white-space: nowrap; flex-shrink: 0;
+}
+.scan-input {
+  flex: 1; padding: 9px 14px; border-radius: 8px;
+  border: none; font-family: inherit; font-size: 14px;
+  outline: none; background: rgba(255,255,255,.15);
+  color: #fff; caret-color: #fff;
+}
+.scan-input::placeholder { color: rgba(255,255,255,.5); }
+.scan-input:focus { background: rgba(255,255,255,.22); }
+.scan-badge {
+  font-size: 10.5px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; white-space: nowrap;
+  background: rgba(255,255,255,.15); color: rgba(255,255,255,.8);
+}
 
-.active-loan-card {
-  border:1px solid var(--border); border-radius:10px;
-  padding:14px 16px; margin-bottom:10px; background:#fff;
-  display:flex; justify-content:space-between; align-items:center; gap:10px;
+/* ── Two-column layout ─────────────────────────── */
+.loan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
 }
-.active-loan-card.overdue { background:#fff8f8; border-color:rgba(192,57,43,.2); }
+.loan-panel {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.panel-header {
+  padding: 13px 16px; background: var(--green-pale);
+  border-bottom: 1px solid rgba(30,77,59,.1);
+  font-size: 13px; font-weight: 700; color: var(--green-dark);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.panel-filter {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+  background: #fafaf9;
+}
+.panel-filter input, .panel-filter select {
+  width: 100%; padding: 8px 11px; border-radius: 7px;
+  border: 1.5px solid #d8d6cf; font-family: inherit; font-size: 13px;
+  outline: none; transition: border-color .2s;
+}
+.panel-filter input:focus,
+.panel-filter select:focus { border-color: var(--green-mid); }
+.panel-filter select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%237d7a72' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat; background-position: right 10px center;
+  background-size: 14px; padding-right: 30px; appearance: none;
+}
+
+/* ── List items ─────────────────────────────────── */
+.pick-list {
+  overflow-y: auto; flex: 1;
+  max-height: 340px;
+}
+.pick-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 13px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .15s;
+}
+.pick-item:last-child { border-bottom: none; }
+.pick-item:hover { background: var(--green-ghost); }
+.pick-item.selected {
+  background: var(--green-pale);
+  border-left: 3px solid var(--green-dark);
+}
+.pick-item.disabled {
+  opacity: .45; cursor: not-allowed; pointer-events: none;
+}
+.pick-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--green-pale); color: var(--green-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.pick-avatar.book {
+  border-radius: 3px 6px 6px 3px;
+  border-left: 4px solid rgba(0,0,0,.15);
+}
+.pick-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.pick-sub   { font-size: 11px; color: var(--ink-muted); margin-top: 1px; }
+.pick-tag   { margin-left: auto; flex-shrink: 0; }
+.pick-empty {
+  text-align: center; padding: 30px 16px;
+  color: var(--ink-muted); font-size: 12.5px;
+}
+.pick-count {
+  font-size: 11px; font-weight: 600; color: var(--ink-muted);
+  padding: 6px 13px; border-top: 1px solid var(--border);
+  background: #fafaf9;
+}
+
+/* ── Konfirmasi box ─────────────────────────────── */
+.confirm-box {
+  margin: 0 20px 20px;
+  border: 2px solid var(--green-light); border-radius: 12px;
+  overflow: hidden;
+  display: none;
+}
+.confirm-box.visible { display: block; }
+.confirm-header {
+  background: var(--green-dark); color: #fff;
+  padding: 11px 16px; font-size: 13px; font-weight: 700;
+}
+.confirm-body { padding: 14px 16px; background: #fff; }
+.confirm-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.confirm-row:last-of-type { border-bottom: none; }
+.confirm-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--green-pale); display: flex; align-items: center;
+  justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.confirm-label { font-size: 10.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .5px; }
+.confirm-val   { font-size: 13px; font-weight: 700; color: var(--ink); margin-top: 1px; }
+.confirm-sub   { font-size: 11.5px; color: var(--ink-muted); }
+.confirm-actions { padding: 12px 16px; background: var(--green-ghost); display: flex; gap: 10px; }
+
+/* ── Return tab ─────────────────────────────────── */
+.return-grid {
+  padding: 20px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.return-panel {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.loan-card {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; gap: 10px;
+}
+.loan-card:hover  { background: var(--green-ghost); }
+.loan-card.selected { background: var(--green-pale); border-left: 3px solid var(--green-dark); }
+.loan-card.overdue  { background: #fff8f8; }
+.loan-card:last-child { border-bottom: none; }
+.loan-left  { flex: 1; min-width: 0; }
+.loan-right { flex-shrink: 0; text-align: right; }
+.loan-book  { font-size: 12.5px; font-weight: 700; color: var(--ink);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.loan-who   { font-size: 11px; color: var(--ink-muted); margin-top: 1px; }
+.loan-days  { font-size: 11px; font-weight: 700; }
+
+/* ── Detail pengembalian ───────────────────────── */
+.return-detail {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.return-detail-empty {
+  padding: 60px 20px; text-align: center;
+  color: var(--ink-muted); font-size: 13px;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media (max-width: 700px) {
+  .loan-grid, .return-grid { grid-template-columns: 1fr; }
+  .pick-list { max-height: 220px; }
+}
 </style>
 </head>
 <body>
 
-<!-- Loading -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner-lg"></div>
-  <p>Memuat modul sirkulasi…</p>
+  <p>Memuat data sirkulasi…</p>
 </div>
 
 <!-- Topbar -->
 <header class="topbar">
   <a class="topbar-logo" href="pustakawan.html">
-    <img src="../../assets/logo.jpeg" alt="Logo SDM01">
+    <img src="../../assets/logo.jpeg" alt="SDM01">
     <div>
       <div class="brand-name">SDM01 Kukusan</div>
       <div class="brand-sub">Perpustakaan Digital</div>
     </div>
   </a>
   <div class="topbar-divider"></div>
-  <div class="topbar-title">🔄 Sirkulasi</div>
+  <div class="topbar-title">🔄 Sirkulasi Buku</div>
   <div class="topbar-right">
     <a href="pustakawan.html" class="btn-logout" style="text-decoration:none">← Dashboard</a>
   </div>
@@ -75,329 +223,660 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
 <div style="height:var(--topbar-h)"></div>
 
-<div style="max-width:860px;margin:0 auto;padding:24px 16px 60px">
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-pinjam"  onclick="showTab('pinjam')">📤 Peminjaman</button>
+  <button class="tab-btn"        id="tab-kembali" onclick="showTab('kembali')">📥 Pengembalian</button>
+</div>
 
-  <!-- Tab navigation -->
-  <div class="card" style="margin-bottom:20px;overflow:visible">
-    <div class="circ-header">
-      <button class="circ-tab active" id="tab-pinjam" onclick="showTab('pinjam')">📤 Peminjaman Buku</button>
-      <button class="circ-tab" id="tab-kembali" onclick="showTab('kembali')">📥 Pengembalian Buku</button>
+<!-- ══════════════════════════════════════════════
+     TAB: PEMINJAMAN
+     ══════════════════════════════════════════════ -->
+<div class="tab-content active" id="content-pinjam">
+
+  <!-- Scan Cepat (barcode-scanner-ready) -->
+  <div class="scan-bar">
+    <span class="scan-badge">⚡ SCAN / KETIK CEPAT</span>
+    <input type="text" id="scan-input" class="scan-input"
+      placeholder="Scan barcode atau ketik NIS / kode buku lalu tekan Enter…"
+      autocomplete="off" onkeypress="if(event.key==='Enter')quickScan()">
+    <span class="scan-badge" id="scan-status">Siap</span>
+  </div>
+
+  <!-- Dua panel: Anggota | Buku -->
+  <div class="loan-grid">
+
+    <!-- ── Panel kiri: Pilih Anggota ── -->
+    <div class="loan-panel">
+      <div class="panel-header">
+        <span>👤 Pilih Anggota</span>
+        <span id="member-selected-badge"></span>
+      </div>
+      <div class="panel-filter">
+        <select id="filter-kelas" onchange="renderMemberList()">
+          <option value="">Semua Kelas</option>
+        </select>
+        <input type="text" id="search-member-input" placeholder="🔍 Ketik nama atau NIS…"
+          oninput="renderMemberList()">
+      </div>
+      <div class="pick-list" id="member-list">
+        <div class="pick-empty">Memuat data anggota…</div>
+      </div>
+      <div class="pick-count" id="member-count"></div>
     </div>
 
-    <!-- ── FORM PEMINJAMAN ──────────────────────────── -->
-    <div class="circ-form active" id="form-pinjam">
-      <div class="section-title">Cari Anggota & Buku</div>
-      <div class="form-row" style="margin-bottom:0">
-        <!-- Cari anggota -->
-        <div>
-          <div class="form-group">
-            <label class="form-label">NIS atau Nama Anggota</label>
-            <div style="display:flex;gap:8px">
-              <input type="text" id="search-member" class="form-input" placeholder="Ketik NIS atau nama…" style="margin-bottom:0" onkeypress="if(event.key==='Enter')searchMember()">
-              <button class="btn btn-primary" onclick="searchMember()">Cari</button>
-            </div>
-          </div>
-          <div id="member-result"></div>
-        </div>
-
-        <!-- Cari buku -->
-        <div>
-          <div class="form-group">
-            <label class="form-label">Kode Aksesi atau Judul Buku</label>
-            <div style="display:flex;gap:8px">
-              <input type="text" id="search-book" class="form-input" placeholder="Ketik kode atau judul…" style="margin-bottom:0" onkeypress="if(event.key==='Enter')searchBookForLoan()">
-              <button class="btn btn-primary" onclick="searchBookForLoan()">Cari</button>
-            </div>
-          </div>
-          <div id="book-result"></div>
-        </div>
+    <!-- ── Panel kanan: Pilih Buku ── -->
+    <div class="loan-panel">
+      <div class="panel-header">
+        <span>📚 Pilih Buku</span>
+        <span id="book-selected-badge"></span>
       </div>
-
-      <!-- Konfirmasi peminjaman -->
-      <div class="loan-confirm" id="loan-details">
-        <div class="section-title">Konfirmasi Peminjaman</div>
-        <div style="background:var(--green-pale);border:1px solid rgba(30,77,59,.15);border-radius:10px;padding:14px 16px;margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <span style="font-size:12px;color:var(--ink-muted)">Anggota:</span>
-            <span style="font-size:13px;font-weight:700" id="loan-member-name">—</span>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span style="font-size:12px;color:var(--ink-muted)">Buku:</span>
-            <span style="font-size:13px;font-weight:700" id="loan-book-title">—</span>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Tanggal Pinjam</label>
-            <input type="date" id="loan-date" class="form-input" readonly style="background:#f5f5f5">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Jatuh Tempo</label>
-            <input type="date" id="due-date" class="form-input">
-          </div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <button class="btn btn-primary" style="flex:1" onclick="processLoan()">✅ Proses Peminjaman</button>
-          <button class="btn btn-ghost" onclick="resetLoanForm()">Reset</button>
-        </div>
+      <div class="panel-filter">
+        <select id="filter-ddc" onchange="renderBookList()">
+          <option value="">Semua Kategori</option>
+          <option value="000">000 · Karya Umum</option>
+          <option value="100">100 · Filsafat</option>
+          <option value="200">200 · Agama</option>
+          <option value="300">300 · Ilmu Sosial</option>
+          <option value="400">400 · Bahasa</option>
+          <option value="500">500 · Sains</option>
+          <option value="600">600 · Teknologi</option>
+          <option value="700">700 · Seni</option>
+          <option value="800">800 · Sastra</option>
+          <option value="900">900 · Sejarah</option>
+          <option value="F">F · Fiksi</option>
+        </select>
+        <input type="text" id="search-book-input" placeholder="🔍 Ketik judul atau kode aksesi…"
+          oninput="renderBookList()">
       </div>
-
-      <!-- Daftar peminjaman aktif -->
-      <div style="margin-top:24px">
-        <div class="section-title">Peminjaman Aktif</div>
-        <div id="active-loans">
-          <div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada peminjaman aktif</div></div>
-        </div>
+      <div class="pick-list" id="book-list">
+        <div class="pick-empty">Memuat data buku…</div>
       </div>
-    </div>
-
-    <!-- ── FORM PENGEMBALIAN ────────────────────────── -->
-    <div class="circ-form" id="form-kembali">
-      <div class="section-title">Cari Peminjaman</div>
-      <div class="form-group">
-        <label class="form-label">NIS Peminjam atau Kode Buku</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="search-loan" class="form-input" placeholder="Ketik NIS atau kode aksesi…" style="margin-bottom:0" onkeypress="if(event.key==='Enter')searchActiveLoan()">
-          <button class="btn btn-primary" onclick="searchActiveLoan()">Cari</button>
-        </div>
-      </div>
-      <div id="return-details"></div>
+      <div class="pick-count" id="book-count"></div>
     </div>
   </div>
 
+  <!-- Konfirmasi peminjaman -->
+  <div class="confirm-box" id="confirm-box">
+    <div class="confirm-header">✅ Konfirmasi Peminjaman</div>
+    <div class="confirm-body">
+      <div class="confirm-row">
+        <div class="confirm-icon">👤</div>
+        <div>
+          <div class="confirm-label">Anggota</div>
+          <div class="confirm-val" id="conf-member-name">—</div>
+          <div class="confirm-sub" id="conf-member-meta">—</div>
+        </div>
+        <button onclick="clearMember()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;color:var(--ink-muted);padding:0" title="Ganti anggota">✕</button>
+      </div>
+      <div class="confirm-row">
+        <div class="confirm-icon">📚</div>
+        <div>
+          <div class="confirm-label">Buku</div>
+          <div class="confirm-val" id="conf-book-title">—</div>
+          <div class="confirm-sub" id="conf-book-meta">—</div>
+        </div>
+        <button onclick="clearBook()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;color:var(--ink-muted);padding:0" title="Ganti buku">✕</button>
+      </div>
+      <div class="confirm-row" style="align-items:center;gap:12px;padding-top:12px">
+        <div style="flex:1">
+          <div class="confirm-label">Tanggal Pinjam</div>
+          <input type="date" id="loan-date" style="width:100%;padding:7px 10px;border:1.5px solid #d8d6cf;border-radius:7px;font-family:inherit;font-size:13px;margin-top:3px" readonly>
+        </div>
+        <div style="flex:1">
+          <div class="confirm-label">Jatuh Tempo</div>
+          <input type="date" id="due-date" style="width:100%;padding:7px 10px;border:1.5px solid #d8d6cf;border-radius:7px;font-family:inherit;font-size:13px;margin-top:3px">
+        </div>
+        <div style="flex:0 0 auto;margin-top:18px">
+          <select id="loan-days" style="padding:8px 10px;border:1.5px solid #d8d6cf;border-radius:7px;font-family:inherit;font-size:13px" onchange="updateDueDate()">
+            <option value="7">7 hari</option>
+            <option value="14">14 hari</option>
+            <option value="21">21 hari</option>
+          </select>
+        </div>
+      </div>
+      <div id="loan-warning" style="display:none;margin-top:8px;padding:8px 12px;background:var(--red-light);border-radius:7px;font-size:12px;color:var(--red)"></div>
+    </div>
+    <div class="confirm-actions">
+      <button class="btn btn-primary" style="flex:1" id="btn-proses" onclick="processLoan()">✅ Proses Peminjaman</button>
+      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- Daftar aktif -->
+  <div style="padding:0 20px 24px">
+    <div class="section-title">📋 Peminjaman Aktif
+      <span id="active-count" style="font-family:'Plus Jakarta Sans';font-size:11.5px;font-weight:600;color:var(--ink-muted);margin-left:4px"></span>
+    </div>
+    <div id="active-loans">
+      <div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada peminjaman aktif</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB: PENGEMBALIAN
+     ══════════════════════════════════════════════ -->
+<div class="tab-content" id="content-kembali">
+
+  <!-- Scan Cepat -->
+  <div class="scan-bar">
+    <span class="scan-badge">⚡ SCAN / KETIK CEPAT</span>
+    <input type="text" id="scan-return-input" class="scan-input"
+      placeholder="Scan barcode atau ketik NIS / kode buku lalu tekan Enter…"
+      autocomplete="off" onkeypress="if(event.key==='Enter')quickScanReturn()">
+  </div>
+
+  <div class="return-grid">
+    <!-- Panel kiri: daftar peminjaman aktif (klik untuk pilih) -->
+    <div class="return-panel">
+      <div class="panel-header">📋 Pilih Peminjaman yang Dikembalikan</div>
+      <div class="panel-filter">
+        <input type="text" id="search-loan-input" placeholder="🔍 Cari nama, NIS, atau judul buku…"
+          oninput="renderLoanList()">
+      </div>
+      <div class="pick-list" id="loan-list" style="max-height:400px">
+        <div class="pick-empty">Memuat peminjaman aktif…</div>
+      </div>
+      <div class="pick-count" id="loan-list-count"></div>
+    </div>
+
+    <!-- Panel kanan: detail + form pengembalian -->
+    <div class="return-detail" id="return-detail-panel">
+      <div class="return-detail-empty">
+        <div style="font-size:36px;margin-bottom:10px">👈</div>
+        Pilih peminjaman dari daftar<br>atau scan barcode di atas
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="../core/db.js"></script>
 <script src="../core/auth.js"></script>
 <script>
-  let selectedMember = null;
-  let selectedBook   = null;
-  let selectedLoan   = null;
+// ── State ──────────────────────────────────────────
+const S = {
+  members:      [],   // semua anggota aktif
+  books:        [],   // semua buku tersedia
+  activeLoans:  [],   // semua pinjaman aktif (enriched)
+  selMember:    null,
+  selBook:      null,
+  selLoan:      null,
+};
 
-  document.addEventListener('DOMContentLoaded', async function() {
-    await waitForLibraries();
-    await dbManager.init();
-    const isLoggedIn = await authManager.init();
-    if (!isLoggedIn) { window.location.href = '../../index.html'; return; }
+// ── Init ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await waitFor(() => typeof Dexie !== 'undefined' && typeof dbManager !== 'undefined');
+  await dbManager.init();
+  const ok = await authManager.init();
+  if (!ok) { window.location.href = '../../index.html'; return; }
 
-    const today = new Date();
-    document.getElementById('loan-date').valueAsDate = today;
-    const due = new Date(); due.setDate(due.getDate() + 7);
-    document.getElementById('due-date').valueAsDate = due;
-    document.getElementById('loadingOverlay').classList.add('hidden');
+  const today = new Date();
+  document.getElementById('loan-date').valueAsDate = today;
+  updateDueDate();
 
-    await loadActiveLoans();
+  await loadAll();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('scan-input').focus();
+});
+
+async function loadAll() {
+  const [allMembers, allBooks, allLoans] =
+    await Promise.all([
+      dbManager.db.members.where('status').equals('aktif').sortBy('nama_lengkap'),
+      dbManager.db.books.where('status').equals('tersedia').sortBy('judul'),
+      dbManager.db.circulation.where('status').equals('dipinjam').toArray(),
+    ]);
+
+  S.members = allMembers;
+  S.books   = allBooks;
+
+  // Enrich loans
+  S.activeLoans = await Promise.all(allLoans.map(async l => {
+    const [book, member] = await Promise.all([
+      dbManager.db.books.get(l.book_id),
+      dbManager.db.members.get(l.member_id),
+    ]);
+    return { ...l, book, member };
+  }));
+
+  // Populate kelas filter
+  buildKelasFilter();
+  renderMemberList();
+  renderBookList();
+  renderActiveLoans();
+  renderLoanList();
+}
+
+// ── Kelas filter options ───────────────────────────
+function buildKelasFilter() {
+  const kelasSet = new Set(S.members.map(m => m.kelas).filter(Boolean).sort());
+  const sel = document.getElementById('filter-kelas');
+  sel.innerHTML = '<option value="">Semua Kelas</option>';
+  kelasSet.forEach(k => {
+    const o = document.createElement('option');
+    o.value = o.textContent = k;
+    sel.appendChild(o);
   });
+}
 
-  function showTab(tab) {
-    document.getElementById('tab-pinjam').className  = 'circ-tab' + (tab==='pinjam'?' active':'');
-    document.getElementById('tab-kembali').className = 'circ-tab' + (tab==='kembali'?' active':'');
-    document.getElementById('form-pinjam').className  = 'circ-form' + (tab==='pinjam'?' active':'');
-    document.getElementById('form-kembali').className = 'circ-form' + (tab==='kembali'?' active':'');
+// ── Render member list ─────────────────────────────
+function renderMemberList() {
+  const kelas = document.getElementById('filter-kelas').value;
+  const q     = document.getElementById('search-member-input').value.trim().toLowerCase();
+  const list  = document.getElementById('member-list');
+  const count = document.getElementById('member-count');
+
+  let filtered = S.members;
+  if (kelas) filtered = filtered.filter(m => m.kelas === kelas);
+  if (q)     filtered = filtered.filter(m =>
+    m.nama_lengkap.toLowerCase().includes(q) ||
+    m.nis.toLowerCase().includes(q)
+  );
+
+  count.textContent = filtered.length + ' anggota ditampilkan';
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="pick-empty">Tidak ada anggota ditemukan</div>'; return;
   }
 
-  async function searchMember() {
-    const q = document.getElementById('search-member').value.trim();
-    if (!q) return;
-    try {
-      let member = await dbManager.db.members.where('nis').equals(q).first();
-      if (!member) {
-        const all = await dbManager.db.members.toArray();
-        member = all.find(m => m.nama_lengkap.toLowerCase().includes(q.toLowerCase()));
-      }
-      const div = document.getElementById('member-result');
-      if (member) {
-        selectedMember = member;
-        div.innerHTML = `<div class="found-card">
-          <div class="found-avatar">👤</div>
-          <div><div class="found-name">${member.nama_lengkap}</div>
-          <div class="found-meta">NIS: ${member.nis} · Kelas: ${member.kelas||'—'}</div></div>
-          <span class="badge green" style="margin-left:auto">✓ Ditemukan</span>
-        </div>`;
-        checkLoanReady();
-      } else {
-        selectedMember = null;
-        div.innerHTML = '<div class="found-card not-available"><div class="found-avatar">❌</div><div><div class="found-name">Anggota tidak ditemukan</div></div></div>';
-      }
-    } catch(e) { alert('Gagal mencari: ' + e.message); }
+  list.innerHTML = filtered.map(m => {
+    const isSelected = S.selMember?.id === m.id;
+    const initials   = m.nama_lengkap.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="pick-item ${isSelected?'selected':''}" onclick="selectMember(${m.id})">
+      <div class="pick-avatar">${initials}</div>
+      <div style="min-width:0">
+        <div class="pick-title">${m.nama_lengkap}</div>
+        <div class="pick-sub">NIS: ${m.nis} · Kelas ${m.kelas||'—'}</div>
+      </div>
+      ${isSelected ? '<span class="badge green pick-tag">✓ Dipilih</span>' : `<span class="badge gray pick-tag" style="font-size:10px">${m.kelas||'—'}</span>`}
+    </div>`;
+  }).join('');
+}
+
+// ── Render book list ───────────────────────────────
+function renderBookList() {
+  const ddc  = document.getElementById('filter-ddc').value;
+  const q    = document.getElementById('search-book-input').value.trim().toLowerCase();
+  const list = document.getElementById('book-list');
+  const count= document.getElementById('book-count');
+
+  let filtered = S.books;
+  if (ddc) filtered = filtered.filter(b => b.kategori_ddc === ddc);
+  if (q)   filtered = filtered.filter(b =>
+    b.judul.toLowerCase().includes(q) ||
+    b.kode_aksesi.toLowerCase().includes(q) ||
+    (b.pengarang||'').toLowerCase().includes(q)
+  );
+
+  count.textContent = filtered.length + ' buku tersedia';
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="pick-empty">Tidak ada buku tersedia dengan filter ini</div>'; return;
   }
 
-  async function searchBookForLoan() {
-    const q = document.getElementById('search-book').value.trim();
-    if (!q) return;
-    try {
-      let book = await dbManager.db.books.where('kode_aksesi').equals(q).first();
-      if (!book) {
-        const all = await dbManager.db.books.toArray();
-        book = all.find(b => b.judul.toLowerCase().includes(q.toLowerCase()) && b.status === 'tersedia');
-      }
-      const div = document.getElementById('book-result');
-      if (book) {
-        if (book.status !== 'tersedia') {
-          selectedBook = null;
-          div.innerHTML = `<div class="found-card not-available"><div class="found-avatar">📚</div><div><div class="found-name">${book.judul}</div><div class="found-meta">Status: ${book.status} — tidak bisa dipinjam</div></div></div>`;
-          return;
-        }
-        selectedBook = book;
-        div.innerHTML = `<div class="found-card">
-          <div class="found-avatar">📚</div>
-          <div><div class="found-name">${book.judul}</div>
-          <div class="found-meta">${book.pengarang} · ${book.kode_aksesi}</div></div>
-          <span class="badge green" style="margin-left:auto">✓ Tersedia</span>
-        </div>`;
-        checkLoanReady();
-      } else {
-        selectedBook = null;
-        div.innerHTML = '<div class="found-card not-available"><div class="found-avatar">📚</div><div><div class="found-name">Buku tidak ditemukan atau tidak tersedia</div></div></div>';
-      }
-    } catch(e) { alert('Gagal mencari: ' + e.message); }
+  const DDC_COLORS = {
+    '000':'#5d6d7e','100':'#8e44ad','200':'#1e4d3b','300':'#2980b9',
+    '400':'#16a085','500':'#27ae60','600':'#d35400','700':'#c0392b',
+    '800':'#2c3e50','900':'#c9882a','F':'#e91e8c'
+  };
+
+  list.innerHTML = filtered.map(b => {
+    const isSelected = S.selBook?.id === b.id;
+    const color = DDC_COLORS[b.kategori_ddc] || '#4a4840';
+    const coverHtml = b.cover
+      ? `<img src="${b.cover}" style="width:100%;height:100%;object-fit:cover">`
+      : `<div style="width:100%;height:100%;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px">📖</div>`;
+    return `<div class="pick-item ${isSelected?'selected':''}" onclick="selectBook(${b.id})">
+      <div class="pick-avatar book" style="overflow:hidden">${coverHtml}</div>
+      <div style="min-width:0;flex:1">
+        <div class="pick-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.judul}</div>
+        <div class="pick-sub">${b.pengarang||'—'} · <code style="font-size:10.5px">${b.kode_aksesi}</code></div>
+      </div>
+      ${isSelected
+        ? '<span class="badge green pick-tag">✓ Dipilih</span>'
+        : `<span class="badge blue pick-tag" style="font-size:10px">${b.kategori_ddc||'—'}</span>`}
+    </div>`;
+  }).join('');
+}
+
+// ── Pilih anggota ──────────────────────────────────
+function selectMember(id) {
+  S.selMember = S.members.find(m => m.id === id) || null;
+  renderMemberList();
+  updateBadges();
+  checkConfirm();
+  // Auto-scroll ke konfirmasi jika keduanya sudah dipilih
+  if (S.selMember && S.selBook) smoothScrollToConfirm();
+}
+
+// ── Pilih buku ─────────────────────────────────────
+function selectBook(id) {
+  S.selBook = S.books.find(b => b.id === id) || null;
+  renderBookList();
+  updateBadges();
+  checkConfirm();
+  if (S.selMember && S.selBook) smoothScrollToConfirm();
+}
+
+function clearMember() { S.selMember = null; renderMemberList(); updateBadges(); checkConfirm(); }
+function clearBook()   { S.selBook   = null; renderBookList();   updateBadges(); checkConfirm(); }
+
+function updateBadges() {
+  document.getElementById('member-selected-badge').innerHTML = S.selMember
+    ? `<span class="badge green" style="font-size:11px">✓ ${S.selMember.nama_lengkap.split(' ')[0]}</span>` : '';
+  document.getElementById('book-selected-badge').innerHTML = S.selBook
+    ? `<span class="badge green" style="font-size:11px">✓ Dipilih</span>` : '';
+}
+
+// ── Konfirmasi ─────────────────────────────────────
+async function checkConfirm() {
+  const box = document.getElementById('confirm-box');
+  const warn= document.getElementById('loan-warning');
+
+  if (!S.selMember || !S.selBook) { box.classList.remove('visible'); return; }
+
+  document.getElementById('conf-member-name').textContent = S.selMember.nama_lengkap;
+  document.getElementById('conf-member-meta').textContent = `NIS: ${S.selMember.nis} · Kelas ${S.selMember.kelas||'—'}`;
+  document.getElementById('conf-book-title').textContent  = S.selBook.judul;
+  document.getElementById('conf-book-meta').textContent   = `${S.selBook.pengarang||'—'} · ${S.selBook.kode_aksesi}`;
+
+  // Cek batas pinjam
+  warn.style.display = 'none';
+  const active = S.activeLoans.filter(l => l.member_id === S.selMember.id);
+  if (active.length >= 2) {
+    warn.style.display = '';
+    warn.innerHTML = `⚠️ <strong>${S.selMember.nama_lengkap}</strong> sudah meminjam ${active.length} buku (batas: 2). Minta kembalikan dulu sebelum pinjam baru.`;
+    document.getElementById('btn-proses').disabled = true;
+  } else {
+    document.getElementById('btn-proses').disabled = false;
   }
 
-  function checkLoanReady() {
-    const detail = document.getElementById('loan-details');
-    if (selectedMember && selectedBook) {
-      detail.classList.add('visible');
-      document.getElementById('loan-member-name').textContent = selectedMember.nama_lengkap;
-      document.getElementById('loan-book-title').textContent  = selectedBook.judul;
+  box.classList.add('visible');
+}
+
+function smoothScrollToConfirm() {
+  document.getElementById('confirm-box').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ── Scan Cepat ─────────────────────────────────────
+// Auto-deteksi NIS atau kode buku — siap barcode scanner
+async function quickScan() {
+  const val  = document.getElementById('scan-input').value.trim();
+  const stat = document.getElementById('scan-status');
+  if (!val) return;
+
+  stat.textContent = '⏳ Mencari…';
+
+  // Coba cocokkan sebagai NIS (anggota)
+  const member = S.members.find(m => m.nis === val)
+    || S.members.find(m => m.nis.toLowerCase() === val.toLowerCase());
+
+  // Coba cocokkan sebagai kode buku
+  const book = S.books.find(b => b.kode_aksesi === val)
+    || S.books.find(b => b.kode_aksesi.toLowerCase() === val.toLowerCase());
+
+  if (member && !book) {
+    selectMember(member.id);
+    stat.textContent = `✅ Anggota: ${member.nama_lengkap.split(' ')[0]}`;
+  } else if (book && !member) {
+    selectBook(book.id);
+    stat.textContent = `✅ Buku: ${book.judul.slice(0,20)}…`;
+  } else if (member && book) {
+    // Langka tapi mungkin — tanya
+    selectMember(member.id);
+    stat.textContent = '⚠️ Cocok dua data — pilih manual';
+  } else {
+    // Cari di semua buku (termasuk tidak tersedia)
+    const anyBook = await dbManager.db.books.where('kode_aksesi').equals(val).first();
+    if (anyBook) {
+      stat.textContent = `⚠️ "${anyBook.judul.slice(0,20)}…" — status: ${anyBook.status}`;
+      showToast(`Buku "${anyBook.judul}" tidak tersedia (${anyBook.status})`, 'error');
+    } else {
+      stat.textContent = '❌ Tidak ditemukan';
+      showToast(`Kode "${val}" tidak cocok dengan NIS atau kode buku manapun`, 'error');
     }
   }
 
-  async function processLoan() {
-    if (!selectedMember || !selectedBook) { alert('Pilih anggota dan buku terlebih dahulu'); return; }
-    const dueDate = document.getElementById('due-date').value;
-    if (!dueDate) { alert('Pilih tanggal jatuh tempo'); return; }
-    try {
-      const activeLoans = await dbManager.db.circulation.where('member_id').equals(selectedMember.id).and(l => l.status === 'dipinjam').count();
-      if (activeLoans >= 2) { alert('Anggota sudah meminjam maksimal 2 buku'); return; }
-      const result = await dbManager.borrowBook(selectedBook.id, selectedMember.id, 7);
-      if (result.success) {
-        showToast('✅ ' + result.message, 'success');
-        resetLoanForm();
-        await loadActiveLoans();
-      } else { alert('❌ ' + result.error); }
-    } catch(e) { alert('Gagal memproses: ' + e.message); }
+  document.getElementById('scan-input').value = '';
+  setTimeout(() => { stat.textContent = 'Siap'; }, 3000);
+}
+
+async function quickScanReturn() {
+  const val = document.getElementById('scan-return-input').value.trim();
+  if (!val) return;
+
+  const loan = S.activeLoans.find(l =>
+    l.member?.nis === val || l.book?.kode_aksesi === val
+  );
+  if (loan) {
+    selectLoan(loan.id);
+    showToast('✅ Peminjaman ditemukan', 'success');
+  } else {
+    showToast(`Tidak ditemukan peminjaman aktif untuk "${val}"`, 'error');
+  }
+  document.getElementById('scan-return-input').value = '';
+}
+
+// ── Proses Peminjaman ──────────────────────────────
+async function processLoan() {
+  if (!S.selMember || !S.selBook) return;
+  const dueDate = document.getElementById('due-date').value;
+  if (!dueDate) { alert('Tanggal jatuh tempo belum dipilih'); return; }
+
+  const days = parseInt(document.getElementById('loan-days').value) || 7;
+  try {
+    const result = await dbManager.borrowBook(S.selBook.id, S.selMember.id, days);
+    if (!result.success) { alert('❌ ' + result.error); return; }
+
+    showToast(`✅ ${S.selMember.nama_lengkap} meminjam "${S.selBook.judul}"`, 'success');
+    resetAll();
+    await loadAll();
+  } catch(e) { alert('Gagal: ' + e.message); }
+}
+
+function resetAll() {
+  S.selMember = null; S.selBook = null;
+  document.getElementById('confirm-box').classList.remove('visible');
+  document.getElementById('loan-warning').style.display = 'none';
+  document.getElementById('scan-input').value = '';
+  document.getElementById('search-member-input').value = '';
+  document.getElementById('search-book-input').value   = '';
+  document.getElementById('filter-kelas').value = '';
+  document.getElementById('filter-ddc').value   = '';
+  renderMemberList(); renderBookList(); updateBadges();
+  document.getElementById('scan-input').focus();
+}
+
+// ── Due date helper ────────────────────────────────
+function updateDueDate() {
+  const days = parseInt(document.getElementById('loan-days').value) || 7;
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  document.getElementById('due-date').valueAsDate = d;
+}
+
+// ── Active loans (pinjam tab) ──────────────────────
+function renderActiveLoans() {
+  const container = document.getElementById('active-loans');
+  const loans = S.activeLoans;
+  document.getElementById('active-count').textContent = loans.length ? `(${loans.length})` : '';
+
+  if (!loans.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada peminjaman aktif</div></div>';
+    return;
+  }
+  const now = new Date();
+  container.innerHTML = loans.map(l => {
+    const due  = new Date(l.due_date);
+    const diff = Math.ceil((due - now) / 86400000);
+    const late = diff < 0;
+    return `<div class="active-loan-card ${late?'overdue':''}" style="border-radius:10px;margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.book?.judul||'—'}</div>
+        <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px">${l.member?.nama_lengkap||'—'} · ${l.member?.kelas||'—'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <span class="badge ${late?'red':diff<=2?'gold':'green'}">${late?`⚠️ ${Math.abs(diff)}h terlambat`:diff===0?'Hari ini':`${diff} hari`}</span>
+        <div style="font-size:10.5px;color:var(--ink-muted);margin-top:3px">${due.toLocaleDateString('id-ID')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Loan list (kembali tab) ────────────────────────
+function renderLoanList() {
+  const q    = document.getElementById('search-loan-input').value.trim().toLowerCase();
+  const list = document.getElementById('loan-list');
+  const cnt  = document.getElementById('loan-list-count');
+
+  let filtered = S.activeLoans;
+  if (q) filtered = filtered.filter(l =>
+    l.member?.nama_lengkap.toLowerCase().includes(q) ||
+    l.member?.nis?.includes(q) ||
+    l.book?.judul.toLowerCase().includes(q) ||
+    l.book?.kode_aksesi?.toLowerCase().includes(q)
+  );
+
+  cnt.textContent = filtered.length + ' peminjaman';
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="pick-empty">Tidak ada peminjaman aktif</div>'; return;
   }
 
-  function resetLoanForm() {
-    selectedMember = null; selectedBook = null;
-    document.getElementById('search-member').value = '';
-    document.getElementById('search-book').value   = '';
-    document.getElementById('member-result').innerHTML = '';
-    document.getElementById('book-result').innerHTML   = '';
-    document.getElementById('loan-details').classList.remove('visible');
+  const now = new Date();
+  list.innerHTML = filtered.map(l => {
+    const due  = new Date(l.due_date);
+    const diff = Math.ceil((due - now) / 86400000);
+    const late = diff < 0;
+    const isSel = S.selLoan?.id === l.id;
+    return `<div class="loan-card ${late?'overdue':''} ${isSel?'selected':''}" onclick="selectLoan(${l.id})">
+      <div class="loan-left">
+        <div class="loan-book">${l.book?.judul||'—'}</div>
+        <div class="loan-who">${l.member?.nama_lengkap||'—'} · ${l.member?.kelas||'—'} · NIS: ${l.member?.nis||'—'}</div>
+      </div>
+      <div class="loan-right">
+        <div class="loan-days" style="color:${late?'var(--red)':diff<=2?'var(--gold)':'var(--green-mid)'}">
+          ${late ? `⚠️ ${Math.abs(diff)}h` : diff===0 ? 'Hari ini' : `${diff}h lagi`}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Pilih pinjaman untuk dikembalikan ─────────────
+function selectLoan(loanId) {
+  S.selLoan = S.activeLoans.find(l => l.id === loanId);
+  renderLoanList();
+  renderReturnDetail();
+}
+
+function renderReturnDetail() {
+  const panel = document.getElementById('return-detail-panel');
+  const l = S.selLoan;
+  if (!l) {
+    panel.innerHTML = '<div class="return-detail-empty"><div style="font-size:36px;margin-bottom:10px">👈</div>Pilih peminjaman dari daftar</div>';
+    return;
   }
 
-  async function loadActiveLoans() {
-    const container = document.getElementById('active-loans');
-    try {
-      const loans = await dbManager.db.circulation.where('status').equals('dipinjam').reverse().limit(20).toArray();
-      if (loans.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Tidak ada peminjaman aktif</div></div>';
-        return;
-      }
-      const details = await Promise.all(loans.map(async l => {
-        const [book, member] = await Promise.all([dbManager.db.books.get(l.book_id), dbManager.db.members.get(l.member_id)]);
-        return { ...l, book, member };
-      }));
-      container.innerHTML = details.map(item => {
-        const due = new Date(item.due_date);
-        const isOverdue = due < new Date();
-        const diffDays = Math.ceil((due - new Date()) / 86400000);
-        return `<div class="active-loan-card ${isOverdue?'overdue':''}">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--ink)">${item.book?.judul||'—'}</div>
-            <div style="font-size:11.5px;color:var(--ink-muted);margin-top:2px">${item.member?.nama_lengkap||'—'} · ${item.member?.kelas||'—'}</div>
-            <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">Dipinjam: ${new Date(item.borrow_date).toLocaleDateString('id-ID')}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            ${isOverdue ? `<span class="badge red">⚠️ Terlambat ${Math.abs(diffDays)} hari</span>` : `<span class="badge green">⏳ ${diffDays} hari lagi</span>`}
-            <div style="font-size:11px;color:var(--ink-muted);margin-top:4px">Jatuh tempo: ${due.toLocaleDateString('id-ID')}</div>
-          </div>
-        </div>`;
-      }).join('');
-    } catch(e) { console.error('Load loans error:', e); }
-  }
+  const due  = new Date(l.due_date);
+  const now  = new Date();
+  const diff = Math.ceil((now - due) / 86400000);
+  const late = diff > 0;
+  const denda = late ? Math.min((diff) * 1000, 10000) : 0;
 
-  async function searchActiveLoan() {
-    const q = document.getElementById('search-loan').value.trim();
-    if (!q) return;
-    try {
-      const allLoans = await dbManager.db.circulation.where('status').equals('dipinjam').toArray();
-      let found = null;
-      for (const l of allLoans) {
-        const member = await dbManager.db.members.get(l.member_id);
-        const book   = await dbManager.db.books.get(l.book_id);
-        if (member?.nis === q || book?.kode_aksesi === q) { found = { ...l, member, book }; break; }
-      }
-      const div = document.getElementById('return-details');
-      if (!found) { div.innerHTML = '<div class="found-card not-available"><div class="found-avatar">❌</div><div><div class="found-name">Peminjaman tidak ditemukan</div></div></div>'; return; }
+  panel.innerHTML = `
+    <div class="panel-header">📥 Detail Pengembalian</div>
+    <div style="padding:16px">
+      <div style="background:var(--green-pale);border:1px solid rgba(30,77,59,.15);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">${l.book?.judul||'—'}</div>
+        <div style="font-size:12px;color:var(--ink-muted)">Kode: <code>${l.book?.kode_aksesi||'—'}</code></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(30,77,59,.1)">
+          <div style="font-size:12.5px;font-weight:600">${l.member?.nama_lengkap||'—'}</div>
+          <div style="font-size:11.5px;color:var(--ink-muted)">NIS: ${l.member?.nis||'—'} · Kelas ${l.member?.kelas||'—'}</div>
+        </div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(30,77,59,.1);display:flex;gap:14px;flex-wrap:wrap">
+          <div><div style="font-size:10.5px;color:var(--ink-muted)">Dipinjam</div><div style="font-size:12px;font-weight:600">${new Date(l.borrow_date).toLocaleDateString('id-ID')}</div></div>
+          <div><div style="font-size:10.5px;color:var(--ink-muted)">Jatuh Tempo</div><div style="font-size:12px;font-weight:600;color:${late?'var(--red)':'var(--ink)'}">${due.toLocaleDateString('id-ID')}</div></div>
+        </div>
+      </div>
 
-      selectedLoan = found;
-      const dueDate = new Date(found.due_date);
-      const diffDays = Math.ceil((new Date() - dueDate) / 86400000);
-      const denda = diffDays > 1 ? Math.min((diffDays-1)*1000, 10000) : 0;
-
-      div.innerHTML = `<div class="card" style="margin-top:14px">
-        <div class="card-header"><span class="card-title">📥 Detail Pengembalian</span></div>
-        <div class="card-body">
-          <div style="background:var(--green-pale);border:1px solid rgba(30,77,59,.15);border-radius:10px;padding:14px;margin-bottom:14px">
-            <div style="font-size:13px;font-weight:700;margin-bottom:6px">${found.book.judul}</div>
-            <div style="font-size:12px;color:var(--ink-muted)">Peminjam: ${found.member.nama_lengkap}</div>
-            <div style="font-size:12px;color:var(--ink-muted)">Dipinjam: ${new Date(found.borrow_date).toLocaleDateString('id-ID')}</div>
-            <div style="font-size:12px;color:var(--ink-muted)">Jatuh tempo: ${dueDate.toLocaleDateString('id-ID')}</div>
-          </div>
-          ${denda > 0 ? `<div class="alert error" style="margin-bottom:14px">
+      ${late
+        ? `<div class="alert error" style="margin-bottom:14px">
             <div class="alert-icon">⚠️</div>
-            <div class="alert-body"><div class="alert-title">Denda Keterlambatan</div>
-            <div class="alert-text">Rp ${denda.toLocaleString('id-ID')} (${diffDays-1} hari × Rp 1.000)</div></div>
-          </div>` : `<div class="alert success" style="margin-bottom:14px">
+            <div class="alert-body">
+              <div class="alert-title">Terlambat ${diff} hari</div>
+              <div class="alert-text">Denda: <strong>Rp ${denda.toLocaleString('id-ID')}</strong> (${diff} hari × Rp 1.000, maks Rp 10.000)</div>
+            </div>
+          </div>`
+        : `<div class="alert success" style="margin-bottom:14px">
             <div class="alert-icon">✅</div>
             <div class="alert-body"><div class="alert-title">Tepat Waktu</div><div class="alert-text">Tidak ada denda</div></div>
           </div>`}
-          <div class="form-group">
-            <label class="form-label">Kondisi Buku Saat Dikembalikan</label>
-            <select id="return-condition" class="form-select">
-              <option value="baik">Baik — Tidak ada kerusakan</option>
-              <option value="rusak_ringan">Rusak Ringan — Masih bisa dipakai</option>
-              <option value="rusak">Rusak Berat — Perlu perbaikan</option>
-              <option value="hilang">Hilang</option>
-            </select>
-          </div>
-          <button onclick="processReturn()" class="btn btn-primary btn-full btn-lg">✅ Proses Pengembalian</button>
-        </div>
-      </div>`;
-    } catch(e) { alert('Gagal mencari: ' + e.message); }
-  }
 
-  async function processReturn() {
-    if (!selectedLoan) return;
-    const condition = document.getElementById('return-condition').value;
-    try {
-      const result = await dbManager.returnBook(selectedLoan.id, condition);
-      if (result.success) {
-        showToast('✅ ' + result.message, 'success');
-        selectedLoan = null;
-        document.getElementById('search-loan').value = '';
-        document.getElementById('return-details').innerHTML = '';
-        await loadActiveLoans();
-      } else { alert('❌ ' + result.error); }
-    } catch(e) { alert('Gagal memproses: ' + e.message); }
-  }
+      <div class="form-group">
+        <label class="form-label">Kondisi Buku Saat Kembali</label>
+        <select id="return-condition" class="form-select">
+          <option value="baik">Baik — Tidak ada kerusakan</option>
+          <option value="rusak_ringan">Rusak Ringan — Masih bisa dipakai</option>
+          <option value="rusak">Rusak Berat — Perlu perbaikan</option>
+          <option value="hilang">Hilang</option>
+        </select>
+      </div>
 
-  function showToast(msg, type='') {
-    const el = document.createElement('div');
-    el.className = 'toast' + (type?' '+type:'');
-    el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
-  }
+      <button onclick="processReturn()" class="btn btn-primary" style="width:100%;padding:13px;font-size:14px">
+        ✅ Proses Pengembalian
+      </button>
+      <button onclick="S.selLoan=null;renderLoanList();renderReturnDetail()" class="btn btn-ghost" style="width:100%;margin-top:8px">
+        Batal
+      </button>
+    </div>`;
+}
 
-  function waitForLibraries() {
-    return new Promise(res => {
-      const c = () => (typeof Dexie!=='undefined'&&typeof dbManager!=='undefined')?res():setTimeout(c,100);
-      c();
-    });
+// ── Proses Pengembalian ────────────────────────────
+async function processReturn() {
+  if (!S.selLoan) return;
+  const condition = document.getElementById('return-condition').value;
+  try {
+    const result = await dbManager.returnBook(S.selLoan.id, condition);
+    if (!result.success) { alert('❌ ' + result.error); return; }
+    showToast('✅ Buku berhasil dikembalikan', 'success');
+    S.selLoan = null;
+    await loadAll();
+    renderReturnDetail();
+  } catch(e) { alert('Gagal: ' + e.message); }
+}
+
+// ── Tab switching ──────────────────────────────────
+function showTab(tab) {
+  ['pinjam','kembali'].forEach(t => {
+    document.getElementById('tab-'+t).className      = 'tab-btn'+(t===tab?' active':'');
+    document.getElementById('content-'+t).className  = 'tab-content'+(t===tab?' active':'');
+  });
+  if (tab === 'kembali') {
+    document.getElementById('scan-return-input').focus();
+    renderLoanList();
+  } else {
+    document.getElementById('scan-input').focus();
   }
+}
+
+// ── Toast ──────────────────────────────────────────
+function showToast(msg, type='') {
+  const el = document.createElement('div');
+  el.className = 'toast' + (type?' '+type:'');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function waitFor(fn, ms=10000) {
+  return new Promise((res,rej) => {
+    const t=Date.now();
+    const c=()=>fn()?res():Date.now()-t>ms?rej(new Error('Timeout')):setTimeout(c,100);
+    c();
+  });
+}
 </script>
 </body>
 </html>
