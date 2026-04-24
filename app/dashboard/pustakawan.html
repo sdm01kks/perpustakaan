@@ -162,7 +162,6 @@
         <div class="card-header"><span class="card-title">⚡ Aksi Cepat</span></div>
         <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
           <a href="../katalog.html" class="btn btn-secondary btn-full">🗂️ Lihat Rak Buku</a>
-          <a href="../katalog.html" class="btn btn-secondary btn-full">🗂️ Lihat Rak Buku</a>
           <a href="sirkulasi.html" class="btn btn-primary btn-full">🔄 Buka Sirkulasi</a>
           <button class="btn btn-secondary btn-full" onclick="showSection('books');openModal('add-book')">📚 Tambah Buku</button>
           <button class="btn btn-secondary btn-full" onclick="showSection('members');openModal('add-member')">👤 Tambah Anggota</button>
@@ -251,6 +250,7 @@
       <div class="card-header">
         <span class="card-title">👥 Daftar Anggota</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="downloadMemberTemplate('xlsx')" title="Download template Excel untuk import anggota">📋 Template</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-import-members').classList.remove('hidden')">📥 Import</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('add-member')">+ Tambah Anggota</button>
         </div>
@@ -614,6 +614,73 @@
 </div>
 
 <!-- ── MODAL: IMPORT ANGGOTA ─────────────────────── -->
+<!-- ── MODAL: EDIT ANGGOTA ─────────────────────────── -->
+<div class="modal-backdrop hidden" id="modal-edit-member">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Edit Data Anggota</div>
+      <button class="modal-close" onclick="closeModal('edit-member')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-member-id">
+
+      <!-- Foto siswa -->
+      <div class="form-group">
+        <label class="form-label">FOTO SISWA</label>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div id="edit-member-photo-preview" style="width:72px;height:90px;border-radius:8px;overflow:hidden;background:var(--green-pale);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;border:1px solid var(--border)">
+            👤
+          </div>
+          <div style="flex:1">
+            <label style="display:block;background:var(--green-pale);border:1.5px dashed var(--green-light);border-radius:8px;padding:10px;text-align:center;cursor:pointer" for="edit-member-photo-input">
+              <div style="font-size:16px;margin-bottom:3px">📷</div>
+              <div style="font-size:12px;font-weight:600;color:var(--green-dark)">Pilih Foto</div>
+              <div style="font-size:10.5px;color:var(--ink-muted);margin-top:2px">JPG/PNG · Auto-resize ke 200×250px · Maks. 300 KB hasil akhir</div>
+            </label>
+            <input type="file" id="edit-member-photo-input" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleMemberPhoto(event)">
+            <div id="edit-member-photo-msg" style="font-size:11px;margin-top:5px;color:var(--ink-muted)">Belum ada foto.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">NIS / NIPD</label>
+          <input type="text" id="edit-member-nis" class="form-input" placeholder="Nomor Induk Siswa">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap *</label>
+          <input type="text" id="edit-member-nama" class="form-input" required placeholder="Nama lengkap">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kelas</label>
+          <input type="text" id="edit-member-kelas" class="form-input" placeholder="mis. 4A, 5B">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. HP Orang Tua</label>
+          <input type="tel" id="edit-member-hp" class="form-input" placeholder="08xx-xxxx-xxxx">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Email Orang Tua</label>
+          <input type="email" id="edit-member-email" class="form-input" placeholder="email@gmail.com">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Status</label>
+          <select id="edit-member-status" class="form-select">
+            <option value="aktif">Aktif</option>
+            <option value="nonaktif">Nonaktif</option>
+            <option value="lulus">Lulus</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('edit-member')">Batal</button>
+      <button class="btn btn-primary" onclick="saveEditMember()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop hidden" id="modal-import-members">
   <div class="modal">
     <div class="modal-header">
@@ -621,15 +688,31 @@
       <button class="modal-close" onclick="document.getElementById('modal-import-members').classList.add('hidden')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="alert info">
-        <div class="alert-icon">💡</div>
-        <div class="alert-body">
-          <div class="alert-title">Format File</div>
-          <div class="alert-text">Kolom yang diperlukan: <strong>nis, nama_lengkap, kelas, no_hp, email_ortu</strong></div>
+      <!-- Step 1: Download template -->
+      <div style="background:var(--green-ghost);border:1px solid rgba(30,77,59,.15);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--green-dark);margin-bottom:3px">📋 Langkah 1 — Download Template</div>
+            <div style="font-size:11.5px;color:var(--ink-muted)">Template berisi kolom: <strong>nis, nama_lengkap, kelas</strong></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn btn-primary btn-sm" onclick="downloadMemberTemplate('xlsx')">⬇ Excel (.xlsx)</button>
+            <button class="btn btn-ghost btn-sm" onclick="downloadMemberTemplate('csv')">⬇ CSV (.csv)</button>
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Pilih File Excel (.xlsx) atau CSV (.csv)</label>
+
+      <!-- Step 2: Upload -->
+      <div style="background:#f8f8f8;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--ink-mid);margin-bottom:8px">📂 Langkah 2 — Upload File yang Sudah Diisi</div>
+        <div class="alert info" style="margin-bottom:12px">
+          <div class="alert-icon">💡</div>
+          <div class="alert-body">
+            <div class="alert-title">Kolom wajib</div>
+            <div class="alert-text"><strong>nis, nama_lengkap</strong> — wajib diisi. <strong>kelas</strong> — boleh kosong.</div>
+          </div>
+        </div>
+        <label class="form-label">Pilih file Excel (.xlsx) atau CSV (.csv)</label>
         <input type="file" id="import-members-file" accept=".xlsx,.csv" class="form-input" onchange="previewImport('members')">
       </div>
       <div id="import-members-preview" class="import-preview"></div>
@@ -937,7 +1020,7 @@
                     <td style="white-space:nowrap">
                         <button onclick="openEditBook(${book.id})" class="btn btn-ghost btn-sm" title="Edit Buku">✏️</button>
                         <button onclick="openEditBookMeta(${book.id})" class="btn btn-ghost btn-sm" title="Cover & Sinopsis">🖼️</button>
-                        <button onclick="printBookQR(${book.id})" class="btn btn-ghost btn-sm" title="Cetak QR">🖨️</button>
+                        <button onclick="printBookBarcode(${book.id})" class="btn btn-ghost btn-sm" title="Cetak Barcode Label">🔢</button>
                         <button onclick="deleteBook(${book.id})" class="btn btn-ghost btn-sm" title="Hapus">🗑️</button>
                     </td>
                 </tr>`).join('');
@@ -982,8 +1065,9 @@
                     <td>${member.kelas || '—'}</td>
                     <td><span class="badge ${member.status === 'aktif' ? 'green' : 'red'}">${member.status || 'aktif'}</span></td>
                     <td style="white-space:nowrap">
+                        <button onclick="openEditMember(${member.id})" class="btn btn-ghost btn-sm" title="Edit Anggota">✏️</button>
                         <button onclick="printMemberCard(${member.id})" class="btn btn-ghost btn-sm" title="Cetak Kartu">🪪</button>
-                        <button onclick="deleteMember(${member.id})" class="btn btn-ghost btn-sm" title="Hapus" style="margin-left:4px">🗑️</button>
+                        <button onclick="deleteMember(${member.id})" class="btn btn-ghost btn-sm" title="Hapus">🗑️</button>
                     </td>
                 </tr>`).join('');
         }
@@ -1181,20 +1265,360 @@ Ketik HAPUS SEMUA untuk melanjutkan:`
             } catch (error) { alert('Gagal mencetak: ' + error.message); }
         }
 
-        async function printMemberCard(memberId) {
+        // ── EDIT MEMBER ───────────────────────────────────
+        async function openEditMember(id) {
+            id = parseInt(id);
+            const member = AppState.allMembers.find(m => m.id === id)
+                        || await dbManager.db.members.get(id);
+            if (!member) { alert('Anggota tidak ditemukan'); return; }
+
+            document.getElementById('edit-member-id').value       = member.id;
+            document.getElementById('edit-member-nis').value      = member.nis          || '';
+            document.getElementById('edit-member-nama').value     = member.nama_lengkap || '';
+            document.getElementById('edit-member-kelas').value    = member.kelas        || '';
+            document.getElementById('edit-member-hp').value       = member.no_hp        || '';
+            document.getElementById('edit-member-email').value    = member.email_ortu   || '';
+            document.getElementById('edit-member-status').value   = member.status       || 'aktif';
+
+            const prev = document.getElementById('edit-member-photo-preview');
+            const msg  = document.getElementById('edit-member-photo-msg');
+            if (member.foto) {
+                prev.innerHTML = `<img src="${member.foto}" style="width:100%;height:100%;object-fit:cover">`;
+                msg.textContent = '✅ Foto sudah ada.';
+                msg.style.color = 'var(--green-dark)';
+            } else {
+                prev.innerHTML = '<span style="font-size:32px">👤</span>';
+                msg.textContent = 'Belum ada foto.';
+                msg.style.color = 'var(--ink-muted)';
+            }
+            // Bersihkan pending foto
+            _pendingMemberPhoto = null;
+            document.getElementById('edit-member-photo-input').value = '';
+
+            openModal('edit-member');
+        }
+
+        let _pendingMemberPhoto = null;
+
+        function handleMemberPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const msg = document.getElementById('edit-member-photo-msg');
+
+            // Cek ukuran file asli (maks 5 MB sebelum resize)
+            if (file.size > 5 * 1024 * 1024) {
+                msg.style.color = 'var(--red)';
+                msg.textContent = '❌ File terlalu besar (maks 5 MB).';
+                event.target.value = ''; return;
+            }
+
+            msg.style.color = 'var(--ink-muted)';
+            msg.textContent = '⏳ Memproses gambar…';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Auto-resize ke 200×250 px (rasio foto 4:5)
+                    const TARGET_W = 200, TARGET_H = 250;
+                    const canvas  = document.createElement('canvas');
+                    canvas.width  = TARGET_W;
+                    canvas.height = TARGET_H;
+                    const ctx = canvas.getContext('2d');
+
+                    // Cover crop: isi canvas penuh tanpa distorsi
+                    const srcRatio = img.width  / img.height;
+                    const dstRatio = TARGET_W   / TARGET_H;
+                    let sx = 0, sy = 0, sw = img.width, sh = img.height;
+                    if (srcRatio > dstRatio) {
+                        sw = img.height * dstRatio;
+                        sx = (img.width - sw) / 2;
+                    } else {
+                        sh = img.width / dstRatio;
+                        sy = (img.height - sh) / 2;
+                    }
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+
+                    // Compress ke JPEG quality 80 → biasanya < 30 KB
+                    let quality = 0.80;
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                    // Jika masih > 300 KB, turunkan kualitas
+                    while (dataUrl.length > 300 * 1024 * 1.37 && quality > 0.3) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    }
+
+                    const sizeKB = Math.round(dataUrl.length * 0.75 / 1024);
+                    _pendingMemberPhoto = dataUrl;
+
+                    document.getElementById('edit-member-photo-preview').innerHTML =
+                        `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover">`;
+                    msg.style.color = 'var(--green-dark)';
+                    msg.textContent = `✅ ${TARGET_W}×${TARGET_H}px · ≈${sizeKB} KB — siap disimpan`;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveEditMember() {
+            const id     = parseInt(document.getElementById('edit-member-id').value);
+            const nama   = document.getElementById('edit-member-nama').value.trim();
+            if (!nama) { alert('Nama lengkap wajib diisi'); return; }
+
+            const updates = {
+                nis:          document.getElementById('edit-member-nis').value.trim(),
+                nama_lengkap: nama,
+                kelas:        document.getElementById('edit-member-kelas').value.trim(),
+                no_hp:        document.getElementById('edit-member-hp').value.trim()    || null,
+                email_ortu:   document.getElementById('edit-member-email').value.trim() || null,
+                status:       document.getElementById('edit-member-status').value,
+                updatedAt:    new Date().toISOString(),
+            };
+            if (_pendingMemberPhoto !== null) updates.foto = _pendingMemberPhoto;
+
             try {
-                const member = await dbManager.db.members.get(memberId);
+                await dbManager.db.members.update(id, updates);
+                const idx = AppState.allMembers.findIndex(m => m.id === id);
+                if (idx >= 0) Object.assign(AppState.allMembers[idx], updates);
+                renderMembersTable(AppState.allMembers);
+                closeModal('edit-member');
+                _pendingMemberPhoto = null;
+                showToast('✅ Data anggota berhasil disimpan', 'success');
+            } catch(err) { alert('Gagal menyimpan: ' + err.message); }
+        }
+
+        // ── TEMPLATE EXPORT ANGGOTA ───────────────────────
+        function downloadMemberTemplate(format) {
+            if (typeof XLSX === 'undefined') {
+                showToast('❌ SheetJS belum dimuat. Coba lagi.', 'error'); return;
+            }
+            const fields   = ['nis', 'nama_lengkap', 'kelas'];
+            const labels   = ['NIS / NIPD (WAJIB)', 'Nama Lengkap (WAJIB)', 'Kelas'];
+            const examples = [
+                ['2024001', 'Ahmad Fauzi', '4A'],
+                ['2024002', 'Siti Rahayu', '4B'],
+                ['2024003', 'Budi Santoso', '5A'],
+            ];
+
+            if (format === 'csv') {
+                const csv = [fields.join(','), ...examples.map(r => r.join(','))].join('\n');
+                _triggerDownload(new Blob([csv], {type:'text/csv;charset=utf-8;'}), 'template_import_anggota.csv');
+                showToast('✅ Template CSV anggota didownload', 'success');
+                return;
+            }
+
+            const wb  = XLSX.utils.book_new();
+
+            // Sheet 1: Template
+            const ws  = XLSX.utils.aoa_to_sheet([fields, labels, ...examples]);
+            ws['!cols'] = [{wch:18},{wch:28},{wch:10}];
+            XLSX.utils.book_append_sheet(wb, ws, 'Template Import Anggota');
+
+            // Sheet 2: Petunjuk
+            const instrData = [
+                ['PETUNJUK IMPORT DATA ANGGOTA'],
+                [''],
+                ['KOLOM WAJIB:'],
+                ['• nis          — Nomor Induk Siswa / NIPD (tidak boleh kosong)'],
+                ['• nama_lengkap — Nama lengkap siswa (tidak boleh kosong)'],
+                [''],
+                ['KOLOM OPSIONAL:'],
+                ['• kelas        — Kelas siswa, mis: 4A, 5B, 6C'],
+                [''],
+                ['CATATAN:'],
+                ['• Siswa dengan NIS yang sudah ada tidak akan diimport (skip duplikat)'],
+                ['• Foto siswa ditambahkan manual lewat fitur Edit Anggota di dashboard'],
+                ['• Status default anggota baru adalah "aktif"'],
+            ];
+            const wsI = XLSX.utils.aoa_to_sheet(instrData);
+            wsI['!cols'] = [{wch:65}];
+            XLSX.utils.book_append_sheet(wb, wsI, 'Petunjuk');
+
+            const wbout = XLSX.write(wb, {bookType:'xlsx', type:'binary'});
+            const buf   = new ArrayBuffer(wbout.length);
+            const view  = new Uint8Array(buf);
+            for (let i = 0; i < wbout.length; i++) view[i] = wbout.charCodeAt(i) & 0xFF;
+            _triggerDownload(new Blob([buf], {type:'application/octet-stream'}), 'template_import_anggota.xlsx');
+            showToast('✅ Template Excel anggota didownload', 'success');
+        }
+
+        // ── BARCODE BUKU ──────────────────────────────────
+        // Menggunakan barcode128 sederhana via canvas (tidak butuh library eksternal)
+        function generateBarcode128(text) {
+            // Encode sebagai Code 128B via SVG barcode dari barcodeapi.org (CDN bebas)
+            return `https://barcodeapi.org/api/128/${encodeURIComponent(text)}`;
+        }
+
+        async function printBookBarcode(bookId) {
+            bookId = parseInt(bookId);
+            const book = AppState.allBooks.find(b => b.id === bookId)
+                      || await dbManager.db.books.get(bookId);
+            if (!book) { alert('Buku tidak ditemukan'); return; }
+
+            const barcodeUrl = generateBarcode128(book.kode_aksesi);
+            const qrUrl      = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(book.kode_aksesi)}`;
+
+            const pw = window.open('', '_blank');
+            pw.document.write(`<!DOCTYPE html><html><head>
+            <title>Label ${book.kode_aksesi}</title>
+            <style>
+                @page { size: 62mm 38mm; margin: 0; }
+                body  { margin: 0; font-family: Arial, sans-serif; }
+                .label-wrap { padding: 8px; display: flex; gap: 0; }
+                /* Cetak 2 label per baris */
+                .label {
+                    width: 62mm; box-sizing: border-box;
+                    border: 1px dashed #ccc; padding: 6px;
+                    text-align: center; display: inline-block;
+                }
+                .school { font-size: 6pt; font-weight: bold; color: #1e4d3b; margin-bottom: 2px; }
+                .barcode img { width: 100%; max-width: 140px; height: 32px; display: block; margin: 3px auto; }
+                .code  { font-family: monospace; font-size: 7pt; letter-spacing: 1px; margin: 2px 0; }
+                .title { font-size: 7pt; color: #333; max-width: 130px; margin: 0 auto;
+                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .qr    { display: none; }
+                @media print {
+                    .no-print { display: none; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }
+            </style></head><body>
+            <div class="no-print" style="padding:12px;text-align:center;font-family:Arial">
+                <p style="font-size:12px;margin-bottom:8px">Preview label barcode — ukuran 62×38mm (label Brother / Dymo)</p>
+                <button onclick="window.print()" style="padding:8px 20px;background:#1e4d3b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Cetak Label</button>
+            </div>
+            <div class="label">
+                <div class="school">PERPUSTAKAAN SDM01 KUKUSAN</div>
+                <div class="barcode"><img src="${barcodeUrl}" alt="${book.kode_aksesi}" onerror="this.style.display='none';this.nextSibling.style.display='block'"><img src="${qrUrl}" style="display:none;width:40px;height:40px;margin:0 auto"></div>
+                <div class="code">${book.kode_aksesi}</div>
+                <div class="title">${book.judul}</div>
+            </div>
+            </body></html>`);
+            pw.document.close();
+        }
+
+        // ── CETAK KARTU ANGGOTA (upgraded: foto + barcode) ──
+        async function printMemberCard(memberId) {
+            memberId = parseInt(memberId);
+            try {
+                const member = AppState.allMembers.find(m => m.id === memberId)
+                            || await dbManager.db.members.get(memberId);
                 if (!member) { alert('Anggota tidak ditemukan'); return; }
-                const printWindow = window.open('', '_blank');
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(member.nis)}`;
-                printWindow.document.write(`<!DOCTYPE html><html><head><title>Kartu ${member.nama_lengkap}</title>
-                <style>@page{size:85.6mm 54mm;margin:0}body{margin:0;font-family:Arial}.card{width:85.6mm;height:54mm;background:linear-gradient(135deg,#1e4d3b 0%,#2d7055 100%);color:white;padding:8mm;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between}.header{display:flex;justify-content:space-between;align-items:center}.school{font-size:10pt;font-weight:bold}.type{font-size:8pt;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px}.body{display:flex;justify-content:space-between;align-items:center}.info{flex:1}.name{font-size:12pt;font-weight:bold;margin-bottom:2mm}.detail{font-size:9pt;opacity:.9}.qr img{width:20mm;height:20mm;background:white;padding:2mm;border-radius:3mm}.footer{font-size:7pt;text-align:center;opacity:.8}@media print{.no-print{display:none}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
-                </head><body><div class="no-print" style="margin:20px;text-align:center"><button onclick="window.print()">🖨️ Cetak Kartu</button></div>
-                <div class="card"><div class="header"><div class="school">SD MUHAMMADIYAH 01 KUKUSAN</div><div class="type">KARTU ANGGOTA</div></div>
-                <div class="body"><div class="info"><div class="name">${member.nama_lengkap}</div><div class="detail">NIS: ${member.nis}</div><div class="detail">Kelas: ${member.kelas}</div></div>
-                <div class="qr"><img src="${qrUrl}" alt="QR"></div></div>
-                <div class="footer">Berlaku selama menjadi siswa aktif</div></div></body></html>`);
-                printWindow.document.close();
+
+                const barcodeUrl = generateBarcode128(member.nis);
+                const fotoHtml   = member.foto
+                    ? `<img src="${member.foto}" style="width:22mm;height:27.5mm;object-fit:cover;border-radius:3mm;border:1.5px solid rgba(255,255,255,.4)">`
+                    : `<div style="width:22mm;height:27.5mm;background:rgba(255,255,255,.15);border-radius:3mm;border:1.5px dashed rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:18pt">👤</div>`;
+
+                const pw = window.open('', '_blank');
+                pw.document.write(`<!DOCTYPE html><html><head>
+                <title>Kartu Anggota — ${member.nama_lengkap}</title>
+                <style>
+                    @page { size: 85.6mm 54mm; margin: 0; }
+                    * { box-sizing: border-box; }
+                    body { margin: 0; font-family: Arial, sans-serif; background: #fff; }
+
+                    .card {
+                        width: 85.6mm; height: 54mm;
+                        background: linear-gradient(135deg, #0f3226 0%, #2d7055 100%);
+                        color: white; padding: 4mm 5mm;
+                        display: flex; flex-direction: column;
+                        position: relative; overflow: hidden;
+                    }
+                    /* Dekorasi sudut */
+                    .card::before {
+                        content: ''; position: absolute;
+                        top: -8mm; right: -8mm;
+                        width: 28mm; height: 28mm;
+                        border-radius: 50%;
+                        background: rgba(255,255,255,.06);
+                    }
+
+                    /* Header */
+                    .card-header {
+                        display: flex; align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 2.5mm;
+                        border-bottom: 0.3mm solid rgba(255,255,255,.2);
+                        padding-bottom: 2mm;
+                    }
+                    .school-name { font-size: 6.5pt; font-weight: bold; line-height: 1.3; }
+                    .card-type {
+                        font-size: 5.5pt; font-weight: bold;
+                        background: rgba(255,255,255,.18);
+                        padding: 1.5px 5px; border-radius: 10px;
+                        letter-spacing: 0.5px; text-transform: uppercase;
+                    }
+
+                    /* Body */
+                    .card-body { display: flex; gap: 3mm; flex: 1; align-items: center; }
+                    .foto-col  { flex-shrink: 0; }
+                    .info-col  { flex: 1; min-width: 0; }
+                    .member-name {
+                        font-size: 9pt; font-weight: bold; line-height: 1.2;
+                        margin-bottom: 1.5mm;
+                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                    }
+                    .member-detail { font-size: 7pt; opacity: .85; line-height: 1.5; }
+                    .member-label { font-size: 6pt; opacity: .6; text-transform: uppercase; letter-spacing: .4px; }
+
+                    /* Barcode */
+                    .barcode-col { flex-shrink: 0; text-align: center; }
+                    .barcode-col img { width: 22mm; height: auto; max-height: 10mm; display: block; filter: brightness(0) invert(1); }
+                    .barcode-num { font-size: 5.5pt; opacity: .75; margin-top: 0.5mm; font-family: monospace; letter-spacing: 0.5px; }
+
+                    /* Footer */
+                    .card-footer {
+                        font-size: 5.5pt; text-align: center;
+                        opacity: .55; margin-top: 2mm;
+                        border-top: 0.3mm solid rgba(255,255,255,.15);
+                        padding-top: 1.5mm;
+                    }
+
+                    @media print {
+                        .no-print { display: none !important; }
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
+                </style></head><body>
+
+                <div class="no-print" style="padding:14px;text-align:center;font-family:Arial;background:#f0f4f0">
+                    <p style="font-size:12px;color:#4a4840;margin-bottom:8px">
+                        Preview Kartu Anggota (85.6 × 54mm — ukuran kartu standar)
+                    </p>
+                    <button onclick="window.print()" style="padding:8px 20px;background:#1e4d3b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Cetak Kartu</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="school-name">SD MUHAMMADIYAH 01 KUKUSAN<br><span style="font-weight:normal;opacity:.7">Jl. Kukusan · Depok · Jawa Barat</span></div>
+                        <div class="card-type">Kartu Anggota</div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="foto-col">${fotoHtml}</div>
+
+                        <div class="info-col">
+                            <div class="member-name">${member.nama_lengkap}</div>
+                            <div class="member-label">NIS / NIPD</div>
+                            <div class="member-detail">${member.nis}</div>
+                            <div class="member-label" style="margin-top:1mm">Kelas</div>
+                            <div class="member-detail">${member.kelas || '—'}</div>
+                        </div>
+
+                        <div class="barcode-col">
+                            <img src="${barcodeUrl}" alt="${member.nis}"
+                                 onerror="this.style.display='none'">
+                            <div class="barcode-num">${member.nis}</div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        Kartu ini berlaku selama menjadi siswa aktif · ${new Date().getFullYear()}
+                    </div>
+                </div>
+                </body></html>`);
+                pw.document.close();
             } catch (error) { alert('Gagal mencetak: ' + error.message); }
         }
 
