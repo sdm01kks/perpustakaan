@@ -1066,7 +1066,8 @@
                     <td><span class="badge ${member.status === 'aktif' ? 'green' : 'red'}">${member.status || 'aktif'}</span></td>
                     <td style="white-space:nowrap">
                         <button onclick="openEditMember(${member.id})" class="btn btn-ghost btn-sm" title="Edit Anggota">✏️</button>
-                        <button onclick="printMemberCard(${member.id})" class="btn btn-ghost btn-sm" title="Cetak Kartu">🪪</button>
+                        <button onclick="printMemberBarcode(${member.id})" class="btn btn-ghost btn-sm" title="Cetak Label Barcode">🔢</button>
+                        <button onclick="printMemberCard(${member.id})" class="btn btn-ghost btn-sm" title="Cetak Kartu Anggota">🪪</button>
                         <button onclick="deleteMember(${member.id})" class="btn btn-ghost btn-sm" title="Hapus">🗑️</button>
                     </td>
                 </tr>`).join('');
@@ -1498,6 +1499,61 @@ Ketik HAPUS SEMUA untuk melanjutkan:`
             pw.document.close();
         }
 
+        // ── CETAK LABEL BARCODE ANGGOTA ─────────────────
+        async function printMemberBarcode(memberId) {
+            memberId = parseInt(memberId);
+            const member = AppState.allMembers.find(m => m.id === memberId)
+                        || await dbManager.db.members.get(memberId);
+            if (!member) { alert('Anggota tidak ditemukan'); return; }
+
+            const barcodeUrl = `https://barcodeapi.org/api/128/${encodeURIComponent(member.nis)}`;
+
+            const pw = window.open('', '_blank');
+            pw.document.write(`<!DOCTYPE html><html><head>
+            <title>Label ${member.nis}</title>
+            <style>
+                @page { size: 62mm 32mm; margin: 0; }
+                body  { margin: 0; font-family: Arial, sans-serif; background: #fff; }
+                .label {
+                    width: 62mm; box-sizing: border-box;
+                    border: 1px dashed #ccc; padding: 5px 6px;
+                    text-align: center;
+                }
+                .school { font-size: 5.5pt; font-weight: bold; color: #1e4d3b; margin-bottom: 2px; }
+                .barcode img {
+                    width: 100%; max-width: 150px; height: 28px;
+                    display: block; margin: 2px auto;
+                }
+                .nis   { font-family: monospace; font-size: 7pt; letter-spacing: 1px; margin: 1px 0; }
+                .name  { font-size: 6.5pt; color: #333; margin: 1px 0;
+                         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; margin: 0 auto; }
+                .kelas { font-size: 6pt; color: #666; }
+                @media print {
+                    .no-print { display: none; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }
+            </style></head><body>
+            <div class="no-print" style="padding:12px;text-align:center;font-family:Arial;font-size:12px">
+                <p style="margin-bottom:8px;color:#4a4840">Label barcode anggota — 62×32mm</p>
+                <button onclick="window.print()" style="padding:7px 18px;background:#1e4d3b;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Cetak Label</button>
+            </div>
+            <div class="label">
+                <div class="school">PERPUSTAKAAN SDM01 KUKUSAN</div>
+                <div class="barcode">
+                    <img src="${barcodeUrl}" alt="${member.nis}"
+                         onerror="this.style.display='none';document.getElementById('qr-fallback').style.display='block'">
+                    <img id="qr-fallback" style="display:none;width:40px;height:40px;margin:2px auto"
+                         src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(member.nis)}"
+                         alt="${member.nis}">
+                </div>
+                <div class="nis">${member.nis}</div>
+                <div class="name">${member.nama_lengkap}</div>
+                <div class="kelas">${member.kelas || ''}</div>
+            </div>
+            </body></html>`);
+            pw.document.close();
+        }
+
         // ── CETAK KARTU ANGGOTA (upgraded: foto + barcode) ──
         async function printMemberCard(memberId) {
             memberId = parseInt(memberId);
@@ -1565,7 +1621,7 @@ Ketik HAPUS SEMUA untuk melanjutkan:`
 
                     /* Barcode */
                     .barcode-col { flex-shrink: 0; text-align: center; }
-                    .barcode-col img { width: 22mm; height: auto; max-height: 10mm; display: block; filter: brightness(0) invert(1); }
+                    .barcode-col img { width: 22mm; height: auto; max-height: 10mm; display: block; background: #fff; padding: 1px; border-radius: 1mm; }
                     .barcode-num { font-size: 5.5pt; opacity: .75; margin-top: 0.5mm; font-family: monospace; letter-spacing: 0.5px; }
 
                     /* Footer */
